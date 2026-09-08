@@ -1,40 +1,42 @@
 // ============================================
-// Menu.gs - Menu tùy chỉnh trên Google Sheet
+// Menu.gs - Tùy biến menu điều khiển trên Google Sheet
 // ============================================
 
 /**
- * Tự động chạy khi mở Google Sheet — tạo menu
+ * Khởi tạo menu trên thanh công cụ khi mở bảng tính
  */
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   
-  ui.createMenu("📧 Email System")
-    .addItem("🚀 Khởi tạo hệ thống (chạy lần đầu)", "menuInit")
+  ui.createMenu("Hệ thống Email")
+    .addItem("Khởi tạo bảng tính (chạy lần đầu)", "menuInit")
     .addSeparator()
-    .addItem("📤 Gửi email ngay", "menuStartSending")
-    .addItem("🧪 Gửi email test", "menuSendTest")
+    .addItem("Bắt đầu gửi email", "menuStartSending")
+    .addItem("Gửi thư thử nghiệm (Test)", "menuSendTest")
     .addSeparator()
-    .addItem("⏸️ Tạm dừng", "menuPause")
-    .addItem("▶️ Tiếp tục gửi", "menuResume")
+    .addItem("Tạm dừng", "menuPause")
+    .addItem("Tiếp tục gửi", "menuResume")
     .addSeparator()
-    .addSubMenu(ui.createMenu("⏰ Hẹn giờ tự động")
-      .addItem("Bật/Tắt gửi tự động (Mỗi 15 phút)", "menuToggleTrigger")
-      .addItem("Xem danh sách triggers", "menuListTriggers")
-      .addItem("Xóa tất cả triggers", "menuRemoveAllTriggers")
+    .addSubMenu(ui.createMenu("Lịch tự động")
+      .addItem("Bật / Tắt kiểm tra định kỳ (15 phút)", "menuToggleTrigger")
+      .addItem("Danh sách trigger đang hoạt động", "menuListTriggers")
+      .addItem("Xóa toàn bộ trigger", "menuRemoveAllTriggers")
     )
-    .addSubMenu(ui.createMenu("🔧 Công cụ")
-      .addItem("📊 Cập nhật Dashboard", "menuUpdateDashboard")
-      .addItem("🔍 Kiểm tra email trùng lặp", "menuCheckDuplicates")
-      .addItem("📝 Liệt kê bản nháp Gmail", "menuListDrafts")
-      .addItem("🔄 Reset trạng thái (gửi lại tất cả)", "menuResetStatus")
+    .addSubMenu(ui.createMenu("Tiện ích")
+      .addItem("Cập nhật Dashboard", "menuUpdateDashboard")
+      .addItem("Làm đẹp toàn bộ bảng tính", "menuFormatAllSheets")
+      .addItem("Kiểm tra email trùng lặp", "menuCheckDuplicates")
+      .addItem("Danh sách thư nháp Gmail", "menuListDrafts")
+      .addItem("Đặt lại trạng thái gửi", "menuResetStatus")
     )
     .addToUi();
 }
 
-// ====== MENU HANDLERS ======
+// ====== XỬ LÝ SỰ KIỆN MENU ======
 
 function menuInit() {
   initAllSheets();
+  formatAllSheets();
 }
 
 function menuStartSending() {
@@ -42,15 +44,15 @@ function menuStartSending() {
   var newRecipients = getNewRecipients();
   
   if (newRecipients.length === 0) {
-    showAlert("ℹ️ Thông báo", "Không có người nhận mới nào để gửi.");
+    showAlert("Thông báo", "Không có người nhận mới nào cần gửi.");
     return;
   }
   
   var response = ui.alert(
-    "📤 Xác nhận gửi email",
-    "Sẽ gửi email đến " + newRecipients.length + " người nhận mới.\n\n" +
-    "Email gửi từng người một, cách nhau " + (getConfig()["Delay giữa email (giây)"] || "5") + " giây.\n\n" +
-    "Bạn có muốn tiếp tục?",
+    "Xác nhận gửi email",
+    "Hệ thống sẽ gửi email đến " + newRecipients.length + " người nhận mới.\n\n" +
+    "Thời gian giãn cách giữa các email: " + (getConfig()["Delay giữa email (giây)"] || "5") + " giây.\n\n" +
+    "Bạn có muốn bắt đầu gửi không?",
     ui.ButtonSet.YES_NO
   );
   
@@ -80,54 +82,58 @@ function menuListTriggers() {
 }
 
 function menuRemoveAllTriggers() {
-  if (showConfirm("⚠️ Xác nhận", "Bạn có chắc muốn xóa TẤT CẢ triggers?\nHệ thống sẽ ngừng gửi tự động.")) {
+  if (showConfirm("Xác nhận xóa trigger", "Bạn có chắc muốn xóa toàn bộ trigger hẹn giờ?\nSau khi xóa, hệ thống sẽ ngừng tự động kiểm tra và gửi email.")) {
     removeAllTriggers();
   }
 }
 
 function menuUpdateDashboard() {
   updateDashboard();
-  showToast("📊 Dashboard đã cập nhật!", "Dashboard");
+  showToast("Đã cập nhật số liệu Dashboard.", "Dashboard");
+}
+
+function menuFormatAllSheets() {
+  formatAllSheets();
+  showToast("Đã định dạng và làm đẹp toàn bộ các bảng tính.", "Hoàn tất");
 }
 
 function menuCheckDuplicates() {
   var dupes = detectDuplicates();
   if (dupes.length === 0) {
-    showAlert("✅ Không trùng lặp", "Không phát hiện email trùng lặp nào trong danh sách.");
+    showAlert("Kiểm tra trùng lặp", "Không phát hiện email trùng lặp nào trong danh sách.");
   } else {
-    var msg = "Phát hiện " + dupes.length + " email trùng lặp:\n\n";
+    var msg = "Phát hiện " + dupes.length + " dòng chứa email trùng lặp:\n\n";
     for (var i = 0; i < Math.min(dupes.length, 20); i++) {
-      msg += "• " + dupes[i].email + " (dòng " + dupes[i].row + " trùng với dòng " + dupes[i].firstRow + ")\n";
+      msg += "- " + dupes[i].email + " (dòng " + dupes[i].row + " trùng với dòng " + dupes[i].firstRow + ")\n";
     }
     if (dupes.length > 20) {
       msg += "\n... và " + (dupes.length - 20) + " email trùng khác.";
     }
-    msg += "\n\nHệ thống sẽ tự động bỏ qua các email trùng khi gửi.";
-    showAlert("⚠️ Email trùng lặp", msg);
+    msg += "\n\nCác email trùng lặp sẽ tự động được bỏ qua trong quá trình gửi.";
+    showAlert("Email trùng lặp", msg);
   }
 }
 
 function menuListDrafts() {
   var drafts = listDrafts();
   if (drafts.length === 0) {
-    showAlert("📝 Bản nháp Gmail", "Không tìm thấy bản nháp nào trong Gmail.");
+    showAlert("Thư nháp Gmail", "Không tìm thấy thư nháp nào trong Gmail.");
     return;
   }
-  var msg = "Tìm thấy " + drafts.length + " bản nháp:\n\n";
+  var msg = "Tìm thấy " + drafts.length + " thư nháp trong hòm thư:\n\n";
   for (var i = 0; i < Math.min(drafts.length, 15); i++) {
     msg += (i + 1) + ". " + drafts[i].subject + "\n";
   }
   if (drafts.length > 15) {
-    msg += "\n... và " + (drafts.length - 15) + " bản nháp khác.";
+    msg += "\n... và " + (drafts.length - 15) + " thư nháp khác.";
   }
-  showAlert("📝 Bản nháp Gmail", msg);
+  showAlert("Thư nháp Gmail", msg);
 }
 
 function menuResetStatus() {
-  if (showConfirm("⚠️ Xác nhận Reset",
-    "Bạn có chắc muốn XÓA tất cả trạng thái 'Done' và 'Lỗi'?\n\n" +
-    "Điều này sẽ cho phép gửi lại email cho TẤT CẢ người trong danh sách.\n\n" +
-    "Hành động này KHÔNG thể hoàn tác!")) {
+  if (showConfirm("Xác nhận đặt lại trạng thái",
+    "Hành động này sẽ xóa toàn bộ trạng thái đã gửi và lỗi trong danh sách, cho phép hệ thống gửi lại cho tất cả mọi người.\n\n" +
+    "Bạn có muốn tiếp tục không?")) {
     resetAllStatus();
     updateDashboard();
   }

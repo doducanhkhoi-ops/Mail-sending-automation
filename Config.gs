@@ -1,37 +1,48 @@
 // ============================================
-// Config.gs - Quản lý cấu hình từ sheet
+// Config.gs - Quản lý cấu hình hệ thống từ bảng tính
 // ============================================
 
-// Tên các sheet
-var SHEET_CONFIG   = "⚙️ Cấu hình";
-var SHEET_DATA     = "📋 Danh sách";
-var SHEET_LOG      = "📊 Lịch sử";
-var SHEET_DASH     = "📈 Dashboard";
+// Tên các bảng tính (hỗ trợ cả tên chuẩn và tên cũ có icon)
+var SHEET_CONFIG   = "Cấu hình";
+var SHEET_CONFIG_LEGACY = "⚙️ Cấu hình";
+var SHEET_DATA     = "Danh sách";
+var SHEET_DATA_LEGACY = "📋 Danh sách";
+var SHEET_LOG      = "Lịch sử";
+var SHEET_LOG_LEGACY = "📊 Lịch sử";
+var SHEET_DASH     = "Dashboard";
+var SHEET_DASH_LEGACY = "📈 Dashboard";
 
-// Config keys (cột A) và giá trị mặc định
+// Giá trị cấu hình mặc định (Cột A)
 var CONFIG_DEFAULTS = {
   "Chế độ nội dung":         "draft_first",    // manual | draft_first | draft_by_subject
   "Tiêu đề email":           "Thông báo quan trọng",
   "Nội dung HTML":           "",
-  "Tiêu đề bản nháp":       "",
+  "Tiêu đề bản nháp":        "",
   "Delay giữa email (giây)": "5",
   "Batch size":              "50",
   "Cooldown giữa batch (phút)": "5",
-  "Giờ gửi tự động":        "",               // VD: "08:00" hoặc để trống
+  "Giờ gửi tự động":         "",
   "CC":                      "",
   "BCC":                     "",
   "Email test":              "",
-  "Quota đã dùng hôm nay":  "0",
-  "Ngày quota":              "",               // Ngày cuối cùng reset quota
-  "Trạng thái hệ thống":    "Idle"            // Idle | Đang gửi... | Tạm dừng | Hoàn thành
+  "Quota đã dùng hôm nay":   "0",
+  "Ngày quota":              "",
+  "Trạng thái hệ thống":     "Sẵn sàng"
 };
 
 /**
- * Lấy (hoặc tạo) sheet cấu hình, trả về object chứa tất cả config
+ * Tìm sheet theo tên chuẩn hoặc tên cũ tương thích
+ */
+function findSheet(ss, primaryName, legacyName) {
+  return ss.getSheetByName(primaryName) || (legacyName ? ss.getSheetByName(legacyName) : null);
+}
+
+/**
+ * Lấy cấu hình hệ thống từ sheet Cấu hình
  */
 function getConfig() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEET_CONFIG);
+  var sheet = findSheet(ss, SHEET_CONFIG, SHEET_CONFIG_LEGACY);
   
   if (!sheet) {
     sheet = _initConfigSheet(ss);
@@ -40,15 +51,25 @@ function getConfig() {
   var data = sheet.getDataRange().getValues();
   var config = {};
   
-  for (var i = 1; i < data.length; i++) { // skip header row
+  for (var i = 1; i < data.length; i++) {
     var key = String(data[i][0]).trim();
     var value = String(data[i][1]).trim();
     if (key) {
       config[key] = value;
+      var kLower = key.toLowerCase();
+      if (kLower.indexOf("nháp") !== -1 || kLower.indexOf("draft") !== -1) {
+        config["Tiêu đề bản nháp"] = config["Tiêu đề bản nháp"] || value;
+      }
+      if (kLower.indexOf("tiêu đề email") !== -1 || kLower.indexOf("tiêu đề thư") !== -1) {
+        config["Tiêu đề email"] = config["Tiêu đề email"] || value;
+      }
+      if (kLower.indexOf("chế độ") !== -1 || kLower.indexOf("mode") !== -1) {
+        config["Chế độ nội dung"] = config["Chế độ nội dung"] || value;
+      }
     }
   }
   
-  // Reset quota nếu ngày đã đổi
+  // Tự động làm mới hạn mức nếu đã sang ngày mới
   var today = formatDateVN(new Date()).split(" ")[0]; // dd/MM/yyyy
   if (config["Ngày quota"] !== today) {
     setConfig("Quota đã dùng hôm nay", "0");
@@ -61,11 +82,11 @@ function getConfig() {
 }
 
 /**
- * Ghi 1 giá trị cấu hình
+ * Cập nhật một giá trị trong sheet Cấu hình
  */
 function setConfig(key, value) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEET_CONFIG);
+  var sheet = findSheet(ss, SHEET_CONFIG, SHEET_CONFIG_LEGACY);
   if (!sheet) return;
   
   var data = sheet.getDataRange().getValues();
@@ -78,7 +99,7 @@ function setConfig(key, value) {
 }
 
 /**
- * Tăng quota đếm
+ * Ghi nhận số lượng email đã gửi vào hạn mức ngày
  */
 function incrementQuota() {
   var config = getConfig();
@@ -88,41 +109,40 @@ function incrementQuota() {
 }
 
 /**
- * Kiểm tra còn quota không (Gmail free = 100/ngày)
+ * Kiểm tra hạn mức gửi email còn lại trong ngày (Gmail miễn phí: 100/ngày, Google Workspace: 1500/ngày)
  */
 function hasQuotaRemaining() {
   var config = getConfig();
   var used = parseInt(config["Quota đã dùng hôm nay"]) || 0;
-  var DAILY_LIMIT = 100; // Gmail free. Workspace = 1500
+  var DAILY_LIMIT = 100;
   return used < DAILY_LIMIT;
 }
 
 /**
- * Khởi tạo sheet cấu hình với giá trị mặc định
+ * Khởi tạo cấu trúc bảng Cấu hình mặc định
  */
 function _initConfigSheet(ss) {
   var sheet = ss.insertSheet(SHEET_CONFIG);
   
-  // Header
-  sheet.getRange("A1:C1").setValues([["Cấu hình", "Giá trị", "Mô tả"]]);
+  sheet.getRange("A1:C1").setValues([["Tham số", "Giá trị thiết lập", "Giải thích"]]);
   sheet.getRange("A1:C1").setFontWeight("bold")
-    .setBackground("#0f3460").setFontColor("#ffffff");
+    .setBackground("#1a365d").setFontColor("#ffffff");
   
   var descriptions = {
-    "Chế độ nội dung":         "manual = nhập tay | draft_first = bản nháp đầu tiên | draft_by_subject = bản nháp theo tiêu đề",
-    "Tiêu đề email":           "Hỗ trợ {{Tên}}, {{Email}}, v.v.",
-    "Nội dung HTML":           "Nội dung email (chỉ dùng khi mode = manual)",
-    "Tiêu đề bản nháp":       "Tiêu đề bản nháp Gmail để tìm (chỉ dùng khi mode = draft_by_subject)",
-    "Delay giữa email (giây)": "Thời gian chờ giữa mỗi email (khuyến nghị 5-10s)",
-    "Batch size":              "Số email tối đa mỗi đợt (khuyến nghị 50, tối đa 65)",
-    "Cooldown giữa batch (phút)": "Thời gian nghỉ giữa các đợt",
-    "Giờ gửi tự động":        "VD: 08:00 — Để trống nếu chỉ gửi thủ công",
-    "CC":                      "Danh sách CC (phân cách bằng dấu phẩy)",
-    "BCC":                     "Danh sách BCC (phân cách bằng dấu phẩy)",
-    "Email test":              "Email nhận bản test trước khi gửi hàng loạt",
-    "Quota đã dùng hôm nay":  "Tự động đếm — KHÔNG chỉnh tay",
-    "Ngày quota":              "Tự động — KHÔNG chỉnh tay",
-    "Trạng thái hệ thống":    "Tự động — Idle / Đang gửi... / Tạm dừng / Hoàn thành"
+    "Chế độ nội dung":         "Chế độ lấy nội dung: manual (nhập HTML bên dưới), draft_first (thư nháp mới nhất), draft_by_subject (tìm theo tiêu đề)",
+    "Tiêu đề email":           "Hỗ trợ biến thay thế như {{Tên}}, {{Email}}",
+    "Nội dung HTML":           "Nội dung email định dạng HTML (chỉ áp dụng khi chọn chế độ manual)",
+    "Tiêu đề bản nháp":        "Tiêu đề thư nháp trong Gmail (chỉ áp dụng khi chọn chế độ draft_by_subject)",
+    "Delay giữa email (giây)": "Thời gian giãn cách giữa mỗi email (khuyến nghị từ 5 đến 10 giây)",
+    "Batch size":              "Số lượng email tối đa trong mỗi đợt gửi (khuyến nghị 50)",
+    "Cooldown giữa batch (phút)": "Thời gian tạm nghỉ giữa các đợt gửi",
+    "Giờ gửi tự động":         "Thời gian gửi tự động (hoặc để trống nếu chỉ chạy định kỳ 15 phút)",
+    "CC":                      "Danh sách địa chỉ nhận CC (phân cách bằng dấu phẩy)",
+    "BCC":                     "Danh sách địa chỉ nhận BCC (phân cách bằng dấu phẩy)",
+    "Email test":              "Địa chỉ email nhận thư kiểm tra trước khi gửi hàng loạt",
+    "Quota đã dùng hôm nay":   "Hệ thống tự động cập nhật, không sửa thủ công",
+    "Ngày quota":              "Hệ thống tự động cập nhật, không sửa thủ công",
+    "Trạng thái hệ thống":     "Hệ thống tự động cập nhật: Sẵn sàng / Đang gửi... / Tạm dừng / Hoàn tất"
   };
   
   var row = 2;
@@ -133,13 +153,11 @@ function _initConfigSheet(ss) {
     row++;
   }
   
-  // Format
   sheet.setColumnWidth(1, 250);
   sheet.setColumnWidth(2, 350);
-  sheet.setColumnWidth(3, 500);
+  sheet.setColumnWidth(3, 520);
   sheet.getRange("A2:A" + (row - 1)).setFontWeight("bold");
   
-  // Dropdown cho chế độ nội dung
   var modeCell = sheet.getRange("B2");
   var modeRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(["manual", "draft_first", "draft_by_subject"])
@@ -150,66 +168,43 @@ function _initConfigSheet(ss) {
 }
 
 /**
- * Khởi tạo toàn bộ các sheet cần thiết (gọi 1 lần)
+ * Khởi tạo đầy đủ các bảng dữ liệu cần thiết cho dự án
  */
 function initAllSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  // Sheet Cấu hình
-  if (!ss.getSheetByName(SHEET_CONFIG)) {
+  if (!findSheet(ss, SHEET_CONFIG, SHEET_CONFIG_LEGACY)) {
     _initConfigSheet(ss);
   }
   
-  // Sheet Danh sách (mẫu)
-  if (!ss.getSheetByName(SHEET_DATA)) {
+  if (!findSheet(ss, SHEET_DATA, SHEET_DATA_LEGACY)) {
     var dataSheet = ss.insertSheet(SHEET_DATA);
     dataSheet.getRange("A1:D1").setValues([["Email", "Tên", "Ghi chú", "Trạng thái"]]);
     dataSheet.getRange("A1:D1").setFontWeight("bold")
-      .setBackground("#0f3460").setFontColor("#ffffff");
-    dataSheet.setColumnWidth(1, 250);
+      .setBackground("#1a365d").setFontColor("#ffffff");
+    dataSheet.setColumnWidth(1, 260);
     dataSheet.setColumnWidth(2, 200);
     dataSheet.setColumnWidth(3, 250);
     dataSheet.setColumnWidth(4, 250);
-    // Thêm dữ liệu mẫu
-    dataSheet.getRange("A2:C2").setValues([["example@gmail.com", "Nguyễn Văn A", "Khách hàng mới"]]);
+    dataSheet.getRange("A2:C2").setValues([["nguoinhan@example.com", "Nguyễn Văn A", "Khách hàng mẫu"]]);
   }
   
-  // Sheet Lịch sử
-  if (!ss.getSheetByName(SHEET_LOG)) {
+  if (!findSheet(ss, SHEET_LOG, SHEET_LOG_LEGACY)) {
     var logSheet = ss.insertSheet(SHEET_LOG);
-    logSheet.getRange("A1:F1").setValues([["Thời gian", "Email", "Tiêu đề", "Trạng thái", "Lỗi", "Batch #"]]);
+    logSheet.getRange("A1:F1").setValues([["Thời gian", "Email", "Tiêu đề", "Trạng thái", "Chi tiết lỗi", "Đợt #"]]);
     logSheet.getRange("A1:F1").setFontWeight("bold")
-      .setBackground("#0f3460").setFontColor("#ffffff");
+      .setBackground("#1a365d").setFontColor("#ffffff");
     logSheet.setColumnWidth(1, 180);
-    logSheet.setColumnWidth(2, 250);
+    logSheet.setColumnWidth(2, 260);
     logSheet.setColumnWidth(3, 300);
-    logSheet.setColumnWidth(4, 100);
+    logSheet.setColumnWidth(4, 120);
     logSheet.setColumnWidth(5, 250);
     logSheet.setColumnWidth(6, 80);
   }
   
-  // Sheet Dashboard
-  if (!ss.getSheetByName(SHEET_DASH)) {
-    var dashSheet = ss.insertSheet(SHEET_DASH);
-    dashSheet.getRange("A1").setValue("📈 DASHBOARD - THỐNG KÊ GỬI EMAIL");
-    dashSheet.getRange("A1").setFontWeight("bold").setFontSize(14)
-      .setBackground("#0f3460").setFontColor("#ffffff");
-    dashSheet.getRange("A1:D1").merge();
-    
-    var labels = [
-      ["Tổng người nhận", "0"],
-      ["Đã gửi thành công ✅", "0"],
-      ["Chưa gửi", "0"],
-      ["Gửi lỗi ❌", "0"],
-      ["Quota còn lại hôm nay", "100"],
-      ["Trạng thái", "Idle"],
-      ["Cập nhật lúc", formatDateVN(new Date())]
-    ];
-    dashSheet.getRange(2, 1, labels.length, 2).setValues(labels);
-    dashSheet.getRange("A2:A" + (labels.length + 1)).setFontWeight("bold");
-    dashSheet.setColumnWidth(1, 250);
-    dashSheet.setColumnWidth(2, 200);
+  if (!findSheet(ss, SHEET_DASH, SHEET_DASH_LEGACY)) {
+    updateDashboard();
   }
   
-  showToast("Đã khởi tạo xong tất cả các sheet!", "✅ Setup hoàn thành");
+  showToast("Đã khởi tạo đầy đủ các bảng dữ liệu.", "Khởi tạo thành công");
 }
