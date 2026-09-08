@@ -57,11 +57,6 @@ function startSending() {
     return;
   }
   
-  var dupes = detectDuplicates();
-  if (dupes.length > 0) {
-    logInfo("Phát hiện " + dupes.length + " email trùng lặp, hệ thống sẽ tự động bỏ qua.");
-  }
-  
   setConfig("Trạng thái hệ thống", "Đang gửi...");
   showToast("Bắt đầu gửi " + newRecipients.length + " email...", "Tiến trình gửi", 3);
   
@@ -78,7 +73,6 @@ function _processBatch(emailContent, config) {
   
   var newRecipients = getNewRecipients();
   var sentInBatch = 0;
-  var seenEmails = {};
   
   for (var i = 0; i < newRecipients.length && sentInBatch < batchSize; i++) {
     if ((Date.now() - startTime) > (MAX_RUNTIME_MS - 30000)) {
@@ -101,13 +95,6 @@ function _processBatch(emailContent, config) {
     }
     
     var recipient = newRecipients[i];
-    
-    var emailLower = recipient.email.toLowerCase();
-    if (seenEmails[emailLower]) {
-      markAsError(recipient.row, "Email trùng lặp với dòng trước");
-      continue;
-    }
-    seenEmails[emailLower] = true;
     
     var success = sendSingleEmail(recipient, emailContent, config, "");
     

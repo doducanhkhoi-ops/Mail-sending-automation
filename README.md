@@ -35,33 +35,23 @@ Sau khi mở bảng tính, thanh công cụ sẽ hiển thị menu **`Hệ thố
 
 ---
 
-## 3. Hướng dẫn triển khai
+## 3. Hướng dẫn triển khai (Qua Thư viện Apps Script)
 
-### Cách 1: Nhân bản bảng tính mẫu (Khuyến nghị cho vận hành độc lập)
-
-1. Thiết lập hoàn chỉnh mã nguồn và các bảng dữ liệu trên một file Google Sheet gốc.
-2. Đổi tên file bảng tính thành `[Mẫu] Hệ Thống Gửi Email`.
-3. Mỗi khi cần tạo chiến dịch mới, nhấp chuột phải vào file trên Google Drive và chọn **Tạo bản sao (Make a copy)**. Toàn bộ mã nguồn, cấu hình và bảng mẫu sẽ được sao chép nguyên vẹn, sẵn sàng sử dụng ngay.
-
----
-
-### Cách 2: Sử dụng qua Thư viện Apps Script (Quản lý mã nguồn tập trung)
-
-Áp dụng khi cần quản lý nhiều bảng tính khác nhau nhưng chỉ duy trì một bản mã nguồn duy nhất:
+Hệ thống được quản lý mã nguồn tập trung qua Thư viện (Library). Bạn có thể áp dụng cho bất kỳ file Google Sheet mới nào chỉ với các bước đơn giản sau:
 
 * **Script ID thư viện:**
   `1venlK-fsZCmeXPcFPVcMHhcANascMjJdwFC_DROoKtxDqazk0SUdN0yz`
 
-**Các bước liên kết:**
-1. Tại Google Sheet mới, vào menu **Tiện ích mở rộng** > **Apps Script**.
+### Các bước cài đặt:
+1. Tại Google Sheet của bạn, vào menu **Tiện ích mở rộng** > **Apps Script**.
 2. Tại khung **Thư viện (Libraries)** ở cột bên trái, nhấn biểu tượng dấu **+**.
 3. Dán mã Script ID ở trên vào ô tìm kiếm và nhấn **Tra cứu**.
-4. Cấu hình 2 thông số bắt buộc:
+4. Cấu hình 2 thông số:
    * **Mã định danh (Identifier):** Đổi tên thành chính xác chữ **`EmailSystem`** (viết liền, đúng chữ hoa/thường).
-   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`6`** (phiên bản tối ưu tìm kiếm thư nháp, gửi ngầm và giao diện toàn diện).
+   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`7`**.
    * Nhấn nút **Thêm (Add)**.
-   *(Lưu ý: Nếu bạn đã thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái và chuyển sang phiên bản **6**, sau đó bấm **Lưu**).*
-5. Thay thế toàn bộ nội dung trong trình soạn thảo bằng đoạn mã cầu nối sau:
+   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **7** và bấm **Lưu**).*
+5. Xóa toàn bộ nội dung cũ trong trình soạn thảo, sau đó dán đoạn mã cầu nối sau vào:
 
 ```javascript
 function onOpen() { EmailSystem.onOpen(); }
@@ -84,7 +74,8 @@ function onIntervalTrigger() { EmailSystem.onIntervalTrigger(); }
 function continueSending() { EmailSystem.continueSending(); }
 ```
 
-6. Nhấn **Lưu dự án** (Ctrl + S), quay lại bảng tính và tải lại trang (F5). Menu `Hệ thống Email` sẽ xuất hiện trên thanh công cụ.
+6. Nhấn **Lưu dự án** (Ctrl + S), quay lại bảng tính và tải lại trang (F5).
+7. Chọn menu **`Hệ thống Email`** > **`Khởi tạo bảng tính (chạy lần đầu)`** để hệ thống tự động thiết lập đầy đủ các bảng dữ liệu chuẩn.
 
 ---
 
