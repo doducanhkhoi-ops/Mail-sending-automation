@@ -70,6 +70,7 @@ function setupFormSubmitTrigger() {
   logInfo("Đã kích hoạt trigger gửi tức thì (Form + Change) bởi: " + activeUser);
   
   // KIỂM TRA VÀ GỬI NGAY CÁC EMAIL ĐANG CÓ SẴN CHƯA GỬI TRONG DANH SÁCH (POOL)
+  var config = getConfig();
   var startTime = config["Khung giờ tự động bắt đầu"] || "08:00";
   var endTime = config["Khung giờ tự động kết thúc"] || "21:30";
   var inWindow = isWithinAllowedTimeWindow(startTime, endTime);
