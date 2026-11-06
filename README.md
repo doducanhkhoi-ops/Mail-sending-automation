@@ -49,9 +49,9 @@ Hệ thống được quản lý mã nguồn tập trung qua Thư viện (Librar
 3. Dán mã Script ID ở trên vào ô tìm kiếm và nhấn **Tra cứu**.
 4. Cấu hình 2 thông số:
    * **Mã định danh (Identifier):** Đổi tên thành chính xác chữ **`EmailSystem`** (viết liền, đúng chữ hoa/thường).
-   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`11`**.
+   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`12`**.
    * Nhấn nút **Thêm (Add)**.
-   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **11** và bấm **Lưu**).*
+   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **12** và bấm **Lưu**).*
 5. Xóa toàn bộ nội dung cũ trong trình soạn thảo, sau đó dán đoạn mã cầu nối sau vào:
 
 ```javascript
@@ -87,9 +87,10 @@ function onFormSubmitTrigger(e) { EmailSystem.onFormSubmitTrigger(e); }
 * **Cấu hình:** Nơi thiết lập các tham số hệ thống:
   * `Chế độ nội dung`: `draft_first` (thư nháp mới nhất), `draft_by_subject` (tìm theo tiêu đề), hoặc `manual` (nội dung HTML trực tiếp).
   * `Tiêu đề bản nháp`: Tiêu đề thư nháp trong Gmail (hỗ trợ tìm kiếm thông minh và Unicode tiếng Việt).
-  * `Delay giữa email (giây)`: Thời gian giãn cách giữa mỗi email (khuyến nghị 5 - 10s).
+  * `Delay giữa email (giây)`: Thời gian giãn cách giữa mỗi email (khuyến nghị 2 - 5s).
   * `Batch size`: Số lượng email tối đa trong mỗi đợt gửi (khuyến nghị 50).
   * `Cooldown giữa batch (phút)`: Thời gian tạm nghỉ giữa các đợt gửi.
+  * `Khung giờ tự động bắt đầu` / `Khung giờ tự động kết thúc`: Ràng buộc thời gian (ví dụ: `08:00` - `21:30`) chỉ áp dụng cho tự động gửi, tránh làm phiền ngoài giờ.
   * `Email test`: Địa chỉ email nhận bản thử nghiệm và nhận thông báo khi hoàn tất.
 * **Danh sách:** Dữ liệu người nhận. Cột đầu tiên là `Email`, có một cột tiêu đề là `Trạng thái`. Các cột còn lại (ví dụ: `Tên`, `Công ty`...) được dùng làm biến trộn dữ liệu `{{...}}`. Cột Trạng thái tự động đổi màu xanh khi gửi thành công và màu đỏ khi có lỗi.
 * **Dashboard:** Bảng điều khiển tiến trình gồm 5 thẻ chỉ số KPI (Tổng liên hệ, Đã gửi, Chờ gửi, Lỗi, Hạn mức ngày), thanh tiến độ trực quan Sparkline và bảng thông số vận hành.

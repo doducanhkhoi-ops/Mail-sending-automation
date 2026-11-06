@@ -57,6 +57,27 @@ function escapeRegex(str) {
 }
 
 /**
+ * Kiểm tra xem thời điểm hiện tại có nằm trong khung giờ cho phép gửi tự động không
+ * @param {String} startTimeStr - Định dạng "HH:mm" (ví dụ "08:00")
+ * @param {String} endTimeStr - Định dạng "HH:mm" (ví dụ "21:30")
+ * @returns {Boolean} true nếu được phép gửi
+ */
+function isWithinAllowedTimeWindow(startTimeStr, endTimeStr) {
+  if (!startTimeStr && !endTimeStr) return true; // Không cấu hình nghĩa là gửi 24/24
+  
+  var nowStr = Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "HH:mm");
+  var start = startTimeStr ? String(startTimeStr).trim() : "00:00";
+  var end = endTimeStr ? String(endTimeStr).trim() : "23:59";
+  
+  if (start <= end) {
+    return nowStr >= start && nowStr <= end;
+  } else {
+    // Trường hợp khung giờ xuyên đêm (ví dụ: 22:00 đến 06:00)
+    return nowStr >= start || nowStr <= end;
+  }
+}
+
+/**
  * Hiển thị thông báo nhanh (Toast) ở góc dưới bên phải Google Sheet
  * An toàn tuyệt đối khi chạy ngầm trong trigger
  */

@@ -70,11 +70,20 @@ function setupFormSubmitTrigger() {
   logInfo("Đã kích hoạt trigger gửi tức thì (Form + Change) bởi: " + activeUser);
   
   // KIỂM TRA VÀ GỬI NGAY CÁC EMAIL ĐANG CÓ SẴN CHƯA GỬI TRONG DANH SÁCH (POOL)
+  var startTime = config["Khung giờ tự động bắt đầu"] || "08:00";
+  var endTime = config["Khung giờ tự động kết thúc"] || "21:30";
+  var inWindow = isWithinAllowedTimeWindow(startTime, endTime);
+  
   var newRecipients = getNewRecipients();
   if (newRecipients.length > 0) {
-    showToast("Đã BẬT: Phát hiện " + newRecipients.length + " email chưa gửi sẵn có, đang gửi ngay...", "Tự động gửi", 6);
-    logInfo("Kích hoạt tự động: Tìm thấy " + newRecipients.length + " email đang chờ trong pool. Khởi động gửi ngay...");
-    startSending();
+    if (inWindow) {
+      showToast("Đã BẬT: Phát hiện " + newRecipients.length + " email chưa gửi sẵn có, đang gửi ngay...", "Tự động gửi", 6);
+      logInfo("Kích hoạt tự động: Tìm thấy " + newRecipients.length + " email đang chờ trong pool. Khởi động gửi ngay...");
+      startSending();
+    } else {
+      showToast("Đã BẬT tự động gửi: Phát hiện " + newRecipients.length + " email chờ, nhưng hiện tại ngoài khung giờ (" + startTime + " - " + endTime + "). Sẽ tự gửi khi đến giờ!", "Tự động gửi", 7);
+      logInfo("Đã bật tự động nhưng ngoài khung giờ cho phép (" + startTime + " - " + endTime + "). Hàng chờ sẽ được gửi khi đến giờ.");
+    }
   } else {
     showToast("Đã BẬT gửi tức thì: Cứ có dòng mới (Form, Nhập tay, IMPORTRANGE) là gửi ngay!", "Tự động gửi", 6);
   }
@@ -148,18 +157,26 @@ function toggleFormSubmitTrigger() {
  * @param {Object} e - Event object từ sự kiện onFormSubmit của Google Sheets
  */
 function onFormSubmitTrigger(e) {
-  logInfo("Phát hiện Form Submit mới vào lúc " + formatDateVN(new Date()) + ". Bắt đầu xử lý gửi ngay...");
+  logInfo("Phát hiện dữ liệu Form / Bảng tính mới vào lúc " + formatDateVN(new Date()) + ". Bắt đầu xử lý...");
   
-  // Khóa độc quyền trong 30 giây để ngăn các trigger chạy song song gửi trùng thư
+  // Khóa độc quyền nhanh 2 giây (giảm từ 30s) để tránh chờ đợi vô ích
   var lock = LockService.getScriptLock();
   try {
-    var hasLock = lock.tryLock(30000);
+    var hasLock = lock.tryLock(2000);
     if (!hasLock) {
-      logInfo("Hệ thống đang bận xử lý một lượt gửi khác, bỏ qua để tránh trùng lặp.");
+      logInfo("Hệ thống đang bận gửi một lượt khác, tự rút lui an toàn.");
       return;
     }
     
     var config = getConfig();
+    
+    // KIỂM TRA RÀNG BUỘC KHUNG GIỜ GỬI TỰ ĐỘNG
+    var startTime = config["Khung giờ tự động bắt đầu"] || "08:00";
+    var endTime = config["Khung giờ tự động kết thúc"] || "21:30";
+    if (!isWithinAllowedTimeWindow(startTime, endTime)) {
+      logInfo("Hiện tại ngoài khung giờ gửi tự động (" + startTime + " - " + endTime + "). Tạm hoãn gửi.");
+      return;
+    }
     
     if (PropertiesService.getScriptProperties().getProperty(PROPS_KEY_PAUSED) === "true") {
       logInfo("Hệ thống đang ở trạng thái Tạm dừng, bỏ qua lượt gửi form mới.");

@@ -57,6 +57,7 @@ function sendSingleEmail(recipient, emailContent, config, batchNum) {
     );
     
     markAsDone(recipient.row);
+    SpreadsheetApp.flush(); // Cập nhật màn hình Google Sheet ngay lập tức
     incrementQuota();
     addLogEntry(recipient.email, personalSubject, "Thành công", "", batchNum);
     
