@@ -169,6 +169,9 @@ function onFormSubmitTrigger(e) {
       return;
     }
     
+    // Đợi 1.5 giây để dữ liệu từ IMPORTRANGE hoặc Form kịp tính toán và hiển thị đầy đủ trên Sheet
+    Utilities.sleep(1500);
+    
     var config = getConfig();
     
     // KIỂM TRA RÀNG BUỘC KHUNG GIỜ GỬI TỰ ĐỘNG
