@@ -71,8 +71,8 @@ function setupFormSubmitTrigger() {
   
   // KIỂM TRA VÀ GỬI NGAY CÁC EMAIL ĐANG CÓ SẴN CHƯA GỬI TRONG DANH SÁCH (POOL)
   var config = getConfig();
-  var startTime = config["Khung giờ tự động bắt đầu"] || "08:00";
-  var endTime = config["Khung giờ tự động kết thúc"] || "21:30";
+  var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
+  var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
   var inWindow = isWithinAllowedTimeWindow(startTime, endTime);
   
   var newRecipients = getNewRecipients();
@@ -172,8 +172,8 @@ function onFormSubmitTrigger(e) {
     var config = getConfig();
     
     // KIỂM TRA RÀNG BUỘC KHUNG GIỜ GỬI TỰ ĐỘNG
-    var startTime = config["Khung giờ tự động bắt đầu"] || "08:00";
-    var endTime = config["Khung giờ tự động kết thúc"] || "21:30";
+    var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
+    var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
     if (!isWithinAllowedTimeWindow(startTime, endTime)) {
       logInfo("Hiện tại ngoài khung giờ gửi tự động (" + startTime + " - " + endTime + "). Tạm hoãn gửi.");
       return;
