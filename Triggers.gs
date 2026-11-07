@@ -288,7 +288,8 @@ function onIntervalTrigger() {
     var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
     var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
     if (!isWithinAllowedTimeWindow(startTime, endTime)) {
-      logInfo("Trigger 15 phút: Hiện tại ngoài khung giờ (" + startTime + " - " + endTime + "). Tạm hoãn gửi.");
+      logInfo("Trigger 15 phút: Hiện tại ngoài khung giờ (" + startTime + " - " + endTime + "). Tạm hoãn gửi và tự động hẹn giờ mở khung.");
+      _scheduleWakeupAtStartTime(startTime);
       return;
     }
     
@@ -388,6 +389,7 @@ function listTriggers() {
 /**
  * Tự động hẹn giờ đánh thức chính xác vào phút bắt đầu của khung giờ
  * Tránh việc phải đợi chu kỳ quét định kỳ 15 phút
+ * Có cơ chế tự động làm mới nếu người dùng thay đổi khung giờ trong bảng Cấu hình
  */
 function _scheduleWakeupAtStartTime(startTimeStr) {
   if (!startTimeStr) return;
@@ -406,19 +408,33 @@ function _scheduleWakeupAtStartTime(startTimeStr) {
     targetDate.setDate(targetDate.getDate() + 1);
   }
   
-  // Kiểm tra xem đã có trigger hẹn giờ mở khung chưa
+  var props = PropertiesService.getScriptProperties();
+  var savedSchedule = props.getProperty("SCHEDULED_START_TIME");
+  
+  // Kiểm tra xem đã có trigger hẹn giờ mở khung và giờ có bị thay đổi không
   var triggers = ScriptApp.getProjectTriggers();
+  var hasTrigger = false;
   for (var i = 0; i < triggers.length; i++) {
     if (triggers[i].getHandlerFunction() === "onScheduledStartTrigger") {
-      return; // Đã có trigger hẹn giờ, không tạo trùng
+      hasTrigger = true;
+      break;
     }
   }
+  
+  // Nếu đã có trigger và giờ hẹn trùng khớp thì giữ nguyên không tạo lặp
+  if (hasTrigger && savedSchedule === startTimeStr) {
+    return;
+  }
+  
+  // Nếu giờ hẹn đã thay đổi hoặc chưa có trigger, dọn sạch trigger cũ và đặt trigger mới
+  _cleanupScheduledStartTriggers();
   
   try {
     ScriptApp.newTrigger("onScheduledStartTrigger")
       .timeBased()
       .at(targetDate)
       .create();
+    props.setProperty("SCHEDULED_START_TIME", startTimeStr);
     logInfo("Đã tự động hẹn giờ đúng " + startTimeStr + " (" + formatDateVN(targetDate) + ") để đánh thức gửi ngay các email chờ!");
   } catch(e) {
     logError("Không thể tạo trigger hẹn giờ mở khung: " + e.message);
@@ -435,10 +451,12 @@ function _cleanupScheduledStartTriggers() {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
+  PropertiesService.getScriptProperties().deleteProperty("SCHEDULED_START_TIME");
 }
 
 /**
  * Hàm kích hoạt khi đồng hồ điểm đúng giờ bắt đầu của khung giờ
+ * Có cơ chế tự động bù độ lệch sớm (Jitter Protection) của Google Cloud
  */
 function onScheduledStartTrigger() {
   _cleanupScheduledStartTriggers();
@@ -447,6 +465,25 @@ function onScheduledStartTrigger() {
   var config = getConfig();
   var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
   var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
+  
+  // Xử lý bù độ lệch sớm (Jitter Protection):
+  // Nếu Google Apps Script kích hoạt sớm vài chục giây trước giờ mở khung:
+  if (startTime) {
+    var parts = startTime.split(":");
+    if (parts.length >= 2) {
+      var targetH = parseInt(parts[0], 10);
+      var targetM = parseInt(parts[1], 10);
+      var now = new Date();
+      var targetToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetH, targetM, 0);
+      var diffMs = targetToday.getTime() - now.getTime();
+      
+      // Nếu kích hoạt sớm dưới 3 phút: Tạm nghỉ chính xác số mili-giây còn lại để chạm đúng 09:00:01
+      if (diffMs > 0 && diffMs <= 180000) {
+        logInfo("Trigger thức dậy sớm " + Math.round(diffMs / 1000) + "s so với giờ bắt đầu. Chờ đến đúng " + startTime + "...");
+        Utilities.sleep(diffMs + 1000);
+      }
+    }
+  }
   
   if (!isWithinAllowedTimeWindow(startTime, endTime)) {
     logInfo("Chưa đúng khung giờ hoặc khung giờ đã thay đổi, bỏ qua.");

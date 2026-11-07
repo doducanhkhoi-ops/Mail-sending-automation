@@ -212,6 +212,16 @@ function syncConfigSheet() {
     sheet.getRange(totalRows + 1, 1, maxRows - totalRows, sheet.getMaxColumns()).clearContent().clearFormat();
   }
   
+  // Đồng bộ lịch hẹn giờ đánh thức chính xác nếu có cấu hình khung giờ
+  try {
+    var sTime = currentValues["Khung giờ tự động bắt đầu"] ? String(currentValues["Khung giờ tự động bắt đầu"]).trim() : "";
+    var eTime = currentValues["Khung giờ tự động kết thúc"] ? String(currentValues["Khung giờ tự động kết thúc"]).trim() : "";
+    var autoMode = currentValues["Giờ gửi tự động"] || "";
+    if (sTime && autoMode !== "Đã tắt" && !isWithinAllowedTimeWindow(sTime, eTime)) {
+      _scheduleWakeupAtStartTime(sTime);
+    }
+  } catch(e) {}
+  
   return sheet;
 }
 
