@@ -353,9 +353,13 @@ function updateDashboard() {
   h3.setValue("TỰ ĐỘNG HÓA HỆ THỐNG");
   h3.setFontSize(10).setFontWeight("bold").setFontColor("#ffffff").setBackground("#334155").setVerticalAlignment("middle").setHorizontalAlignment("center");
   
+  var autoMode = config["Giờ gửi tự động"] || "Đã tắt";
+  var autoOwner = config["Người phụ trách gửi tự động"] || "Đã tắt";
+  var ownerShort = (autoOwner && autoOwner !== "Đã tắt") ? autoOwner.split("@")[0] + "@..." : "Chưa có";
+  
   var m3 = [
-    ["Lịch: " + (config["Giờ gửi tự động"] || "Đã tắt")],
-    ["Test: " + (config["Email test"] ? "Đã cấu hình" : "Chưa có")],
+    ["Lịch: " + autoMode],
+    ["Người gửi: " + ownerShort],
     ["Đã gửi hôm nay: " + quotaUsed + " thư"],
     ["Hạn mức còn lại: " + quotaRemaining]
   ];

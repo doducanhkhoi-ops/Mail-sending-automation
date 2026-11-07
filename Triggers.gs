@@ -22,15 +22,32 @@ function setupIntervalTrigger() {
     .everyMinutes(15)
     .create();
   
-  setConfig("Giờ gửi tự động", "Mỗi 15 phút");
-  logInfo("Đã thiết lập trigger kiểm tra định kỳ 15 phút.");
+  var activeUser = "";
+  try {
+    activeUser = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
+  } catch (e) {
+    activeUser = "Không xác định";
+  }
+  
+  var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
+  var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
+  var timeWindowText = (startTime || endTime) ? " (" + (startTime || "00:00") + " - " + (endTime || "23:59") + ")" : " (24/7)";
+  
+  setConfig("Người phụ trách gửi tự động", activeUser);
+  setConfig("Giờ gửi tự động", "Mỗi 15 phút" + timeWindowText);
+  logInfo("Đã thiết lập trigger kiểm tra định kỳ 15 phút bởi: " + activeUser);
   
   // KIỂM TRA VÀ BẮT ĐẦU GỬI NGAY NẾU CÓ EMAIL CHỜ
+  var inWindow = isWithinAllowedTimeWindow(startTime, endTime);
   var newRecipients = getNewRecipients();
   if (newRecipients.length > 0) {
-    showToast("Đã bật tự động: Phát hiện " + newRecipients.length + " email mới, đang bắt đầu gửi...", "Lịch tự động", 5);
-    logInfo("Bật lịch tự động: Tìm thấy " + newRecipients.length + " người nhận mới. Khởi động gửi ngay...");
-    startSending();
+    if (inWindow) {
+      showToast("Đã bật tự động: Phát hiện " + newRecipients.length + " email mới, đang bắt đầu gửi...", "Lịch tự động", 5);
+      logInfo("Bật lịch tự động: Tìm thấy " + newRecipients.length + " người nhận mới. Khởi động gửi ngay...");
+      startSending();
+    } else {
+      showToast("Đã bật tự động: Hiện ngoài khung giờ (" + (startTime || "00:00") + " - " + (endTime || "23:59") + "). Sẽ tự gửi khi đến giờ!", "Lịch tự động", 5);
+    }
   } else {
     showToast("Đã bật tự động: Hiện chưa có email mới. Hệ thống sẽ tự động kiểm tra mỗi 15 phút.", "Lịch tự động", 5);
     logInfo("Bật lịch tự động: Chưa có người nhận mới. Hệ thống sẽ đợi chu kỳ 15 phút tiếp theo.");
@@ -67,12 +84,16 @@ function setupFormSubmitTrigger() {
   // Lưu thông tin người sở hữu trigger vào cấu hình
   setConfig("Người phụ trách gửi tự động", activeUser);
   
-  logInfo("Đã kích hoạt trigger gửi tức thì (Form + Change) bởi: " + activeUser);
-  
-  // KIỂM TRA VÀ GỬI NGAY CÁC EMAIL ĐANG CÓ SẴN CHƯA GỬI TRONG DANH SÁCH (POOL)
+  // Đồng bộ ô 'Giờ gửi tự động' hiển thị rõ chế độ và khung giờ cho phép
   var config = getConfig();
   var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
   var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
+  var timeWindowText = (startTime || endTime) ? " (" + (startTime || "00:00") + " - " + (endTime || "23:59") + ")" : " (24/7)";
+  setConfig("Giờ gửi tự động", "Tức thì (Realtime)" + timeWindowText);
+  
+  logInfo("Đã kích hoạt trigger gửi tức thì (Form + Change) bởi: " + activeUser);
+  
+  // KIỂM TRA VÀ GỬI NGAY CÁC EMAIL ĐANG CÓ SẴN CHƯA GỬI TRONG DANH SÁCH (POOL)
   var inWindow = isWithinAllowedTimeWindow(startTime, endTime);
   
   var newRecipients = getNewRecipients();
@@ -104,6 +125,7 @@ function removeFormSubmitTrigger() {
     }
   }
   setConfig("Người phụ trách gửi tự động", "Đã tắt");
+  setConfig("Giờ gửi tự động", "Đã tắt");
   if (removed > 0) {
     logInfo("Đã xóa " + removed + " trigger tự động gửi tức thì.");
   }
@@ -258,6 +280,14 @@ function onIntervalTrigger() {
   
   try {
     var config = getConfig();
+    
+    // KIỂM TRA RÀNG BUỘC KHUNG GIỜ CHO CẢ TRIGGER 15 PHÚT
+    var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
+    var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
+    if (!isWithinAllowedTimeWindow(startTime, endTime)) {
+      logInfo("Trigger 15 phút: Hiện tại ngoài khung giờ (" + startTime + " - " + endTime + "). Tạm hoãn gửi.");
+      return;
+    }
     
     // Nếu có trigger đợt (continuation trigger) đang chạy thì nhường lượt
     var continuationTriggers = _getContinuationTriggers();
