@@ -139,12 +139,13 @@ function toggleFormSubmitTrigger() {
     // Nếu trong Cấu hình ghi nhận người khác đang bật mà bản thân tài khoản này chưa có trigger
     if (currentOwner && currentOwner !== "Đã tắt" && activeUser && currentOwner !== activeUser) {
       var confirmTakeover = showConfirm(
-        "Cảnh báo trùng lặp Trigger",
-        "Hệ thống đang được bật gửi tự động bởi tài khoản: " + currentOwner + ".\n\n" +
-        "Nếu bạn bật tiếp bằng tài khoản " + activeUser + ", có thể dẫn tới việc gửi trùng 2 email cho mỗi khách!\n\n" +
-        "Bạn có muốn chuyển giao quyền gửi tự động sang tài khoản (" + activeUser + ") của bạn không?"
+        "Chuyển giao quyền gửi tự động",
+        "Hệ thống hiện đang gửi tự động bằng email: " + currentOwner + ".\n\n" +
+        "Bạn có muốn chuyển giao sang gửi bằng email của bạn (" + activeUser + ") không?\n\n" +
+        "(Bấm YES để Chuyển giao ngay, bấm NO để Hủy bỏ giữ nguyên tài khoản cũ)."
       );
       if (!confirmTakeover) {
+        showToast("Đã hủy chuyển giao. Hệ thống tiếp tục gửi bằng email: " + currentOwner, "Thông báo");
         return;
       }
     }

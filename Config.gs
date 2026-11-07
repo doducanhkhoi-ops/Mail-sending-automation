@@ -23,6 +23,7 @@ var CONFIG_DEFAULTS = {
   "Cooldown giữa batch (phút)": "5",
   "Khung giờ tự động bắt đầu": "",
   "Khung giờ tự động kết thúc": "",
+  "Người phụ trách gửi tự động": "Đã tắt",
   "Giờ gửi tự động":         "",
   "CC":                      "",
   "BCC":                     "",
@@ -98,6 +99,11 @@ function setConfig(key, value) {
       return;
     }
   }
+  
+  // Nếu chưa có khóa này trong bảng Cấu hình, tự động thêm dòng mới vào cuối bảng
+  var lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow + 1, 1).setValue(key).setFontWeight("bold");
+  sheet.getRange(lastRow + 1, 2).setValue(value);
 }
 
 /**
@@ -138,6 +144,9 @@ function _initConfigSheet(ss) {
     "Delay giữa email (giây)": "Thời gian giãn cách giữa mỗi email (khuyến nghị từ 5 đến 10 giây)",
     "Batch size":              "Số lượng email tối đa trong mỗi đợt gửi (khuyến nghị 50)",
     "Cooldown giữa batch (phút)": "Thời gian tạm nghỉ giữa các đợt gửi",
+    "Khung giờ tự động bắt đầu": "Giờ bắt đầu cho phép gửi tự động (định dạng HH:mm, để trống nếu gửi 24/7)",
+    "Khung giờ tự động kết thúc": "Giờ kết thúc cho phép gửi tự động (định dạng HH:mm, để trống nếu gửi 24/7)",
+    "Người phụ trách gửi tự động": "Email tài khoản Google hiện đang chịu trách nhiệm gửi tự động",
     "Giờ gửi tự động":         "Thời gian gửi tự động (hoặc để trống nếu chỉ chạy định kỳ 15 phút)",
     "CC":                      "Danh sách địa chỉ nhận CC (phân cách bằng dấu phẩy)",
     "BCC":                     "Danh sách địa chỉ nhận BCC (phân cách bằng dấu phẩy)",
