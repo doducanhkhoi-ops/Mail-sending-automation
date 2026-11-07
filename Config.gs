@@ -23,6 +23,7 @@ var CONFIG_DEFAULTS = {
   "Khung giờ tự động kết thúc": "",
   "Email đang gửi hiện tại": "Đã tắt",
   "Giờ gửi tự động":         "Đã tắt",
+  "Hạn mức Google còn lại":  "100",
   "Email test":              "",
   "Quota đã dùng hôm nay":   "0",
   "Ngày quota":              "",
@@ -99,23 +100,45 @@ function setConfig(key, value) {
 }
 
 /**
- * Ghi nhận số lượng email đã gửi vào hạn mức ngày
+ * Ghi nhận số lượng email đã gửi vào hạn mức ngày và cập nhật quota sống từ Google
  */
 function incrementQuota() {
   var config = getConfig();
   var current = parseInt(config["Quota đã dùng hôm nay"]) || 0;
   setConfig("Quota đã dùng hôm nay", String(current + 1));
+  try {
+    var live = MailApp.getRemainingDailyQuota();
+    if (live !== null && live !== undefined) {
+      setConfig("Hạn mức Google còn lại", String(live));
+    }
+  } catch(e) {}
   return current + 1;
 }
 
 /**
- * Kiểm tra hạn mức gửi email còn lại trong ngày (Gmail miễn phí: 100/ngày, Google Workspace: 1500/ngày)
+ * Kiểm tra hạn mức gửi email còn lại thực tế từ máy chủ Google (Live Quota)
+ * Bảo vệ tuyệt đối: Dừng an toàn khi quota còn <= 1 để tránh lỗi 'Service invoked too many times'
+ * @returns {Boolean} true nếu còn hạn mức gửi an toàn
  */
 function hasQuotaRemaining() {
+  try {
+    var remaining = MailApp.getRemainingDailyQuota();
+    if (remaining !== null && remaining !== undefined) {
+      setConfig("Hạn mức Google còn lại", String(remaining));
+      if (remaining <= 1) {
+        logInfo("Hạn mức máy chủ Google chỉ còn: " + remaining + ". Tự động dừng gửi để bảo vệ an toàn.");
+        return false;
+      }
+      return true;
+    }
+  } catch (e) {
+    logError("Không thể đọc MailApp.getRemainingDailyQuota: " + e.message);
+  }
+  
+  // Dự phòng kiểm tra theo bộ đếm trong sheet nếu không gọi được API
   var config = getConfig();
   var used = parseInt(config["Quota đã dùng hôm nay"]) || 0;
-  var DAILY_LIMIT = 100;
-  return used < DAILY_LIMIT;
+  return used < 100;
 }
 
 /**
@@ -158,6 +181,14 @@ function syncConfigSheet() {
   var unifiedSender = currentValues["Email đang gửi hiện tại"] ||
                       currentValues["Người phụ trách gửi tự động"] ||
                       CONFIG_DEFAULTS["Email đang gửi hiện tại"];
+                      
+  var liveQuotaVal = "100";
+  try {
+    var lq = MailApp.getRemainingDailyQuota();
+    if (lq !== null && lq !== undefined) {
+      liveQuotaVal = String(lq);
+    }
+  } catch(e) {}
   
   var descriptions = {
     "Tiêu đề thư nháp Gmail":   "Tên thư nháp trong Gmail để làm mẫu (ĐỂ TRỐNG = Tự động lấy thư nháp mới nhất)",
@@ -169,6 +200,7 @@ function syncConfigSheet() {
     "Khung giờ tự động kết thúc": "Giờ kết thúc gửi tự động (định dạng HH:mm, ví dụ 21:30, ĐỂ TRỐNG = Gửi mọi lúc 24/7)",
     "Email đang gửi hiện tại": "Tài khoản Google đang gửi thư tự động (Hệ thống tự cập nhật)",
     "Giờ gửi tự động":         "Chế độ chạy tự động: Tức thì (Realtime) / Mỗi 15 phút / Đã tắt (Hệ thống tự cập nhật)",
+    "Hạn mức Google còn lại":  "Số lượt gửi máy chủ Google còn cấp cho tài khoản này hôm nay (Hệ thống đo sống trực tiếp)",
     "Email test":              "Địa chỉ email nhận thư kiểm tra trước khi gửi hàng loạt",
     "Quota đã dùng hôm nay":   "Hệ thống tự động cập nhật, không sửa thủ công",
     "Ngày quota":              "Hệ thống tự động cập nhật, không sửa thủ công",
@@ -200,6 +232,9 @@ function syncConfigSheet() {
     }
     if (key === "Email đang gửi hiện tại") {
       val = unifiedSender;
+    }
+    if (key === "Hạn mức Google còn lại") {
+      val = liveQuotaVal;
     }
     
     if (key === "Khung giờ tự động bắt đầu" || key === "Khung giờ tự động kết thúc") {
