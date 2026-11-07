@@ -28,10 +28,9 @@ Sau khi mở bảng tính, thanh công cụ sẽ hiển thị menu **`Hệ thố
   * **Danh sách trigger đang hoạt động:** Kiểm tra các tiến trình hẹn giờ ngầm đang bật.
   * **Xóa toàn bộ trigger:** Hủy bỏ toàn bộ lịch hẹn giờ ngầm.
 * **Menu `Tiện ích`:**
-  * **Cập nhật Dashboard:** Làm mới các thẻ chỉ số KPI, thanh tiến độ Sparkline và bảng hiệu suất.
-  * **Đồng bộ & Làm sạch bảng Cấu hình:** Tự động loại bỏ các tham số cũ dư thừa (như Tiêu đề email, Chế độ nội dung), đưa bảng Cấu hình về chuẩn MECE tinh gọn mà vẫn bảo lưu dữ liệu đã cài đặt.
-  * **Làm đẹp toàn bộ bảng tính:** 1-Click đồng bộ font chữ, màu sắc, viền ô và định dạng có điều kiện chuyên nghiệp (Non-AI) cho cả 4 bảng tính.
-  * **Kiểm tra email trùng lặp:** Quét và cảnh báo các địa chỉ email xuất hiện nhiều lần.
+  * **Cập nhật Dashboard:** Tự động thiết lập hệ thống công thức trực tiếp (Live Formulas) cho toàn bộ Dashboard.
+  * **Làm đẹp toàn bộ bảng tính:** 1-Click đồng bộ font chữ, màu sắc, viền ô, dọn dẹp bảng Cấu hình chuẩn MECE và cài đặt Dashboard thời gian thực cho cả 4 bảng tính.
+  * **Kiểm tra email trùng lặp:** Quét và cảnh báo các địa chỉ email xuất hiện nhiều lần (hệ thống mặc định vẫn gửi cho toàn bộ các dòng để bảo đảm đầy đủ dữ liệu từng người).
   * **Danh sách thư nháp Gmail:** Liệt kê chính xác danh sách tên các thư nháp hiện có trong Gmail của bạn.
   * **Đặt lại trạng thái gửi:** Xóa toàn bộ trạng thái `Đã gửi` / `Lỗi` để cho phép gửi lại từ đầu.
 
@@ -50,9 +49,9 @@ Hệ thống được quản lý mã nguồn tập trung qua Thư viện (Librar
 3. Dán mã Script ID ở trên vào ô tìm kiếm và nhấn **Tra cứu**.
 4. Cấu hình 2 thông số:
    * **Mã định danh (Identifier):** Đổi tên thành chính xác chữ **`EmailSystem`** (viết liền, đúng chữ hoa/thường).
-   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`20`**.
+   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`21`**.
    * Nhấn nút **Thêm (Add)**.
-   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **20** và bấm **Lưu**).*
+   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **21** và bấm **Lưu**).*
 5. Xóa toàn bộ nội dung cũ trong trình soạn thảo, sau đó dán đoạn mã cầu nối sau vào:
 
 ```javascript

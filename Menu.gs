@@ -26,8 +26,7 @@ function onOpen() {
       )
       .addSubMenu(ui.createMenu("Tiện ích")
         .addItem("Cập nhật Dashboard", "menuUpdateDashboard")
-        .addItem("Đồng bộ & Làm sạch bảng Cấu hình", "menuSyncConfig")
-        .addItem("Làm đẹp toàn bộ bảng tính", "menuFormatAllSheets")
+        .addItem("Làm đẹp toàn bộ bảng tính (Đồng bộ chuẩn MECE)", "menuFormatAllSheets")
         .addItem("Kiểm tra email trùng lặp", "menuCheckDuplicates")
         .addItem("Danh sách thư nháp Gmail", "menuListDrafts")
         .addItem("Đặt lại trạng thái gửi", "menuResetStatus")
@@ -125,7 +124,7 @@ function menuCheckDuplicates() {
     if (dupes.length > 20) {
       msg += "\n... và " + (dupes.length - 20) + " email trùng khác.";
     }
-    msg += "\n\nCác email trùng lặp sẽ tự động được bỏ qua trong quá trình gửi.";
+    msg += "\n\nLưu ý: Hệ thống hiện tại GỬI CHO TẤT CẢ các dòng trong danh sách (kể cả email trùng lặp) nhằm đảm bảo thông tin cá nhân hóa riêng của từng dòng đều được gửi đầy đủ.";
     showAlert("Email trùng lặp", msg);
   }
 }

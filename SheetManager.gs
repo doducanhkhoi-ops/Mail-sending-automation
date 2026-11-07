@@ -132,8 +132,21 @@ function addLogEntry(email, subject, status, error, batchNum) {
 }
 
 /**
- * Cập nhật giao diện và số liệu thống kê trên bảng Dashboard
- * Thiết kế giao diện Operations Dashboard chuyên nghiệp, tối giản hiện đại
+ * Chuyển đổi chỉ số cột số (1-based) thành chữ cái cột (A, B, C... Z, AA...)
+ */
+function _colIndexToLetter(col) {
+  var temp, letter = '';
+  while (col > 0) {
+    temp = (col - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    col = Math.floor((col - temp - 1) / 26);
+  }
+  return letter;
+}
+
+/**
+ * Cập nhật Dashboard thời gian thực bằng CÔNG THỨC TRỰC TIẾP (Live Formulas)
+ * Tự động cập nhật 100% trong thời gian thực khi có dữ liệu mới hoặc đổi trạng thái, KHÔNG CẦN BẤM NÚT
  */
 function updateDashboard() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -142,39 +155,33 @@ function updateDashboard() {
     dashSheet = ss.insertSheet(SHEET_DASH);
   }
   
-  var all = getAllRecipients();
-  var total = all.length;
-  var done = all.filter(function(r) {
-    if (!r.status) return false;
-    var s = r.status.toLowerCase();
-    return s.startsWith("done") || s.startsWith("đã gửi") || s.startsWith("thành công") || s.startsWith("✅");
-  }).length;
-  var errors = all.filter(function(r) {
-    if (!r.status) return false;
-    var s = r.status.toLowerCase();
-    return s.startsWith("lỗi") || s.startsWith("❌");
-  }).length;
-  var pending = Math.max(0, total - done - errors);
+  // Xác định tên chuẩn của các sheet để tham chiếu công thức
+  var dataSheetObj = findSheet(ss, SHEET_DATA, SHEET_DATA_LEGACY);
+  var configSheetObj = findSheet(ss, SHEET_CONFIG, SHEET_CONFIG_LEGACY);
+  var dataSheetName = dataSheetObj ? dataSheetObj.getName() : SHEET_DATA;
+  var configSheetName = configSheetObj ? configSheetObj.getName() : SHEET_CONFIG;
   
-  var config = getConfig();
-  var quotaUsed = parseInt(config["Quota đã dùng hôm nay"]) || 0;
-  var quotaLimit = 100;
-  var quotaRemaining = Math.max(0, quotaLimit - quotaUsed);
-  var statusText = config["Trạng thái hệ thống"] || "Sẵn sàng";
-  var updatedTime = formatDateVN(new Date());
+  // Nhận diện động cột Email và Trạng thái trong bảng Danh sách
+  var emailColLetter = "A";
+  var statusColLetter = "D";
+  if (dataSheetObj && dataSheetObj.getLastColumn() > 0) {
+    var headers = dataSheetObj.getRange(1, 1, 1, dataSheetObj.getLastColumn()).getDisplayValues()[0];
+    for (var j = 0; j < headers.length; j++) {
+      var h = String(headers[j]).trim().toLowerCase();
+      if (h === "email" || h === "địa chỉ email" || h === "mail") {
+        emailColLetter = _colIndexToLetter(j + 1);
+      }
+      if (h === "trạng thái" || h === "status") {
+        statusColLetter = _colIndexToLetter(j + 1);
+      }
+    }
+  }
   
-  var pctDone = total > 0 ? ((done / total) * 100).toFixed(1) : "0.0";
-  var pctPending = total > 0 ? ((pending / total) * 100).toFixed(1) : "0.0";
-  var pctErrors = total > 0 ? ((errors / total) * 100).toFixed(1) : "0.0";
-  var totalProcessed = done + errors;
-  var successRate = totalProcessed > 0 ? ((done / totalProcessed) * 100).toFixed(1) : "100.0";
-  var errorRate = totalProcessed > 0 ? ((errors / totalProcessed) * 100).toFixed(1) : "0.0";
+  var emailRange = "'" + dataSheetName + "'!" + emailColLetter + "2:" + emailColLetter;
+  var statusRange = "'" + dataSheetName + "'!" + statusColLetter + "2:" + statusColLetter;
+  var configLookup = "'" + configSheetName + "'!A:B";
   
-  var delaySec = parseInt(config["Delay giữa email (giây)"]) || 5;
-  var estMinutes = total > 0 ? Math.ceil((pending * delaySec) / 60) : 0;
-  var estTimeText = pending > 0 ? ("~" + estMinutes + " phút") : "0 phút";
-  
-  // 1. Độ rộng 5 cột căn đối
+  // 1. Độ rộng 5 cột cân đối
   dashSheet.setColumnWidth(1, 175);
   dashSheet.setColumnWidth(2, 175);
   dashSheet.setColumnWidth(3, 175);
@@ -192,10 +199,10 @@ function updateDashboard() {
     .setVerticalAlignment("middle");
   dashSheet.setRowHeight(1, 38);
   
-  // 3. Dòng 2: Header phụ (Thời gian & Trạng thái)
+  // 3. Dòng 2: Header phụ (Thời gian thực & Trạng thái động)
   var subLeft = dashSheet.getRange("A2:C2");
   subLeft.merge();
-  subLeft.setValue("Thời điểm cập nhật: " + updatedTime);
+  subLeft.setFormula('="Thời điểm: Tự động cập nhật trực tiếp (Realtime)"');
   subLeft.setBackground("#f8fafc")
     .setFontColor("#64748b")
     .setFontSize(10)
@@ -204,7 +211,7 @@ function updateDashboard() {
     
   var subRight = dashSheet.getRange("D2:E2");
   subRight.merge();
-  subRight.setValue("Trạng thái: " + statusText);
+  subRight.setFormula('="Trạng thái: " & IFERROR(VLOOKUP("Trạng thái hệ thống", ' + configLookup + ', 2, FALSE), "Sẵn sàng")');
   subRight.setBackground("#f8fafc")
     .setFontColor("#0f172a")
     .setFontSize(10)
@@ -217,7 +224,7 @@ function updateDashboard() {
   dashSheet.getRange("A3:E3").setBackground("#ffffff").clearContent();
   dashSheet.setRowHeight(3, 10);
   
-  // 4. Khối thẻ chỉ số (KPI Cards) - Dòng 4, 5, 6
+  // 4. Khối thẻ chỉ số (KPI Cards) - Dòng 4, 5, 6 hoàn toàn bằng CÔNG THỨC TỰ ĐỘNG
   dashSheet.setRowHeight(4, 24);
   dashSheet.setRowHeight(5, 44);
   dashSheet.setRowHeight(6, 22);
@@ -231,11 +238,12 @@ function updateDashboard() {
     .setHorizontalAlignment("center")
     .setVerticalAlignment("middle");
     
-  dashSheet.getRange("A5").setValue(total).setFontColor("#0f172a").setBackground("#f8fafc");
-  dashSheet.getRange("B5").setValue(done).setFontColor("#16a34a").setBackground("#f0fdf4");
-  dashSheet.getRange("C5").setValue(pending).setFontColor("#2563eb").setBackground("#eff6ff");
-  dashSheet.getRange("D5").setValue(errors).setFontColor("#dc2626").setBackground("#fef2f2");
-  dashSheet.getRange("E5").setValue(quotaRemaining + " / " + quotaLimit).setFontColor("#334155").setBackground("#f8fafc");
+  // Công thức động dòng 5
+  dashSheet.getRange("A5").setFormula('=COUNTA(' + emailRange + ')').setFontColor("#0f172a").setBackground("#f8fafc");
+  dashSheet.getRange("B5").setFormula('=COUNTIF(' + statusRange + ', "Đã gửi*") + COUNTIF(' + statusRange + ', "Done*") + COUNTIF(' + statusRange + ', "Thành công*") + COUNTIF(' + statusRange + ', "✅*")').setFontColor("#16a34a").setBackground("#f0fdf4");
+  dashSheet.getRange("D5").setFormula('=COUNTIF(' + statusRange + ', "Lỗi*") + COUNTIF(' + statusRange + ', "❌*") + COUNTIF(' + statusRange + ', "Error*")').setFontColor("#dc2626").setBackground("#fef2f2");
+  dashSheet.getRange("C5").setFormula('=MAX(0, A5 - B5 - D5)').setFontColor("#2563eb").setBackground("#eff6ff");
+  dashSheet.getRange("E5").setFormula('=MAX(0, 100 - IFERROR(VALUE(VLOOKUP("Quota đã dùng hôm nay", ' + configLookup + ', 2, FALSE)), 0)) & " / 100"').setFontColor("#334155").setBackground("#f8fafc");
   
   var valRange = dashSheet.getRange("A5:E5");
   valRange.setFontSize(22)
@@ -244,36 +252,29 @@ function updateDashboard() {
     .setVerticalAlignment("middle");
   dashSheet.getRange("E5").setFontSize(18);
   
-  var kpiSubs = [[
-    "100% dữ liệu",
-    pctDone + "% tổng danh sách",
-    pctPending + "% còn lại",
-    pctErrors + "% tỷ lệ lỗi",
-    "Đã dùng " + quotaUsed + " lượt"
-  ]];
-  dashSheet.getRange("A6:E6").setValues(kpiSubs)
-    .setFontSize(9)
-    .setFontColor("#64748b")
-    .setBackground("#f8fafc")
+  // Công thức động dòng 6
+  dashSheet.getRange("A6").setValue("100% dữ liệu").setFontColor("#64748b").setBackground("#f8fafc");
+  dashSheet.getRange("B6").setFormula('=IF(A5=0, "0.0% tổng danh sách", ROUND(B5/A5*100, 1) & "% tổng danh sách")').setBackground("#f0fdf4").setFontColor("#15803d");
+  dashSheet.getRange("C6").setFormula('=IF(A5=0, "0.0% còn lại", ROUND(C5/A5*100, 1) & "% còn lại")').setBackground("#eff6ff").setFontColor("#1d4ed8");
+  dashSheet.getRange("D6").setFormula('=IF(A5=0, "0.0% tỷ lệ lỗi", ROUND(D5/A5*100, 1) & "% tỷ lệ lỗi")').setBackground("#fef2f2").setFontColor("#b91c1c");
+  dashSheet.getRange("E6").setFormula('="Đã dùng " & IFERROR(VLOOKUP("Quota đã dùng hôm nay", ' + configLookup + ', 2, FALSE), 0) & " lượt"').setFontColor("#64748b").setBackground("#f8fafc");
+  
+  dashSheet.getRange("A6:E6").setFontSize(9)
     .setHorizontalAlignment("center")
     .setVerticalAlignment("middle");
-  dashSheet.getRange("B6").setBackground("#f0fdf4").setFontColor("#15803d");
-  dashSheet.getRange("C6").setBackground("#eff6ff").setFontColor("#1d4ed8");
-  dashSheet.getRange("D6").setBackground("#fef2f2").setFontColor("#b91c1c");
-  
   dashSheet.getRange("A4:E6").setBorder(true, true, true, true, true, true, "#e2e8f0", SpreadsheetApp.BorderStyle.SOLID);
   
   // Dòng 7: Khoảng đệm
   dashSheet.getRange("A7:E7").setBackground("#ffffff").clearContent();
   dashSheet.setRowHeight(7, 12);
   
-  // 5. Thanh tiến độ Sparkline (Dòng 8, 9)
+  // 5. Thanh tiến độ Sparkline tự động cập nhật theo ô B5 và A5 (Dòng 8, 9)
   dashSheet.setRowHeight(8, 22);
   dashSheet.setRowHeight(9, 26);
   
   var progressHeader = dashSheet.getRange("A8:E8");
   progressHeader.merge();
-  progressHeader.setValue("TIẾN ĐỘ HOÀN THÀNH: " + pctDone + "% (" + done + " / " + total + " liên hệ)");
+  progressHeader.setFormula('="TIẾN ĐỘ HOÀN THÀNH: " & IF(A5=0, "0%", ROUND(B5/A5*100, 1) & "%") & " (" & B5 & " / " & A5 & " liên hệ)"');
   progressHeader.setFontSize(10)
     .setFontWeight("bold")
     .setFontColor("#1e293b")
@@ -282,14 +283,7 @@ function updateDashboard() {
     
   var progressBar = dashSheet.getRange("A9:E9");
   progressBar.merge();
-  if (total > 0) {
-    var maxVal = Math.max(1, total);
-    // Dùng setFormulaR1C1 hoặc tham chiếu trực tiếp ô KPI B5 (Đã gửi), C5 (Chờ), D5 (Lỗi) để không bị lỗi định dạng vùng ngôn ngữ (Locale)
-    var sparkFormula = '=SPARKLINE(B5:D5, {"charttype", "bar"; "color1", "#16a34a"; "color2", "#cbd5e1"; "color3", "#dc2626"; "max", ' + maxVal + '})';
-    progressBar.setFormula(sparkFormula);
-  } else {
-    progressBar.setValue("");
-  }
+  progressBar.setFormula('=IF(A5=0, "", SPARKLINE(B5:D5, {"charttype", "bar"; "color1", "#16a34a"; "color2", "#cbd5e1"; "color3", "#dc2626"; "max", MAX(1, A5)}))');
   progressBar.setBackground("#f8fafc")
     .setBorder(true, true, true, true, false, false, "#e2e8f0", SpreadsheetApp.BorderStyle.SOLID);
     
@@ -297,7 +291,7 @@ function updateDashboard() {
   dashSheet.getRange("A10:E10").setBackground("#ffffff").clearContent();
   dashSheet.setRowHeight(10, 14);
   
-  // 6. Bảng chi tiết: Box 1 (A11:B15), Box 2 (C11:D15), Box 3 (E11:E15)
+  // 6. Bảng chi tiết: Box 1 (A11:B15), Box 2 (C11:D15), Box 3 (E11:E15) hoàn toàn bằng CÔNG THỨC
   dashSheet.setRowHeight(11, 26);
   dashSheet.setRowHeight(12, 24);
   dashSheet.setRowHeight(13, 24);
@@ -310,20 +304,23 @@ function updateDashboard() {
   h1.setValue("HIỆU SUẤT VẬN HÀNH");
   h1.setFontSize(10).setFontWeight("bold").setFontColor("#ffffff").setBackground("#334155").setVerticalAlignment("middle");
   
-  var m1 = [
-    ["Tỷ lệ gửi thành công", successRate + "%"],
-    ["Tỷ lệ phát sinh lỗi", errorRate + "%"],
-    ["Thời gian gửi ước tính", estTimeText],
-    ["Số lượng cần xử lý tiếp", pending + " liên hệ"]
-  ];
-  dashSheet.getRange("A12:B15").setValues(m1)
-    .setFontSize(10)
-    .setVerticalAlignment("middle")
-    .setBackground("#ffffff");
+  dashSheet.getRange("A12").setValue("Tỷ lệ gửi thành công");
+  dashSheet.getRange("B12").setFormula('=IF((B5+D5)=0, "100%", ROUND(B5/(B5+D5)*100, 1) & "%")');
+  
+  dashSheet.getRange("A13").setValue("Tỷ lệ phát sinh lỗi");
+  dashSheet.getRange("B13").setFormula('=IF((B5+D5)=0, "0%", ROUND(D5/(B5+D5)*100, 1) & "%")');
+  
+  dashSheet.getRange("A14").setValue("Thời gian gửi ước tính");
+  dashSheet.getRange("B14").setFormula('=IF(C5=0, "0 phút", "~" & CEILING(C5 * IFERROR(VALUE(VLOOKUP("Delay giữa email (giây)", ' + configLookup + ', 2, FALSE)), 3) / 60) & " phút")');
+  
+  dashSheet.getRange("A15").setValue("Số lượng cần xử lý tiếp");
+  dashSheet.getRange("B15").setFormula('=C5 & " liên hệ"');
+  
+  dashSheet.getRange("A12:B15").setFontSize(10).setVerticalAlignment("middle").setBackground("#ffffff");
   dashSheet.getRange("A12:A15").setFontColor("#475569");
   dashSheet.getRange("B12:B15").setFontWeight("bold").setHorizontalAlignment("right");
   dashSheet.getRange("B12").setFontColor("#16a34a");
-  dashSheet.getRange("B13").setFontColor(errors > 0 ? "#dc2626" : "#475569");
+  dashSheet.getRange("B13").setFontColor("#dc2626");
   dashSheet.getRange("B14").setFontColor("#0f172a");
   dashSheet.getRange("B15").setFontColor("#2563eb");
   dashSheet.getRange("A11:B15").setBorder(true, true, true, true, true, true, "#e2e8f0", SpreadsheetApp.BorderStyle.SOLID);
@@ -334,17 +331,19 @@ function updateDashboard() {
   h2.setValue("THIẾT LẬP CHIẾN DỊCH");
   h2.setFontSize(10).setFontWeight("bold").setFontColor("#ffffff").setBackground("#334155").setVerticalAlignment("middle");
   
-  var draftTitle = config["Tiêu đề thư nháp Gmail"] || config["Tiêu đề bản nháp"] || "(Thư nháp mới nhất)";
-  var m2 = [
-    ["Mẫu thư nháp Gmail", draftTitle],
-    ["Khoảng cách giãn cách", (config["Delay giữa email (giây)"] || "3") + "s / thư"],
-    ["Kích thước mỗi đợt gửi", (config["Batch size"] || "50") + " email"],
-    ["Thời gian nghỉ giữa đợt", (config["Cooldown giữa batch (phút)"] || "5") + " phút"]
-  ];
-  dashSheet.getRange("C12:D15").setValues(m2)
-    .setFontSize(10)
-    .setVerticalAlignment("middle")
-    .setBackground("#ffffff");
+  dashSheet.getRange("C12").setValue("Mẫu thư nháp Gmail");
+  dashSheet.getRange("D12").setFormula('=IF(IFERROR(VLOOKUP("Tiêu đề thư nháp Gmail", ' + configLookup + ', 2, FALSE), "")="", "(Thư nháp mới nhất)", VLOOKUP("Tiêu đề thư nháp Gmail", ' + configLookup + ', 2, FALSE))');
+  
+  dashSheet.getRange("C13").setValue("Khoảng cách giãn cách");
+  dashSheet.getRange("D13").setFormula('=IFERROR(VLOOKUP("Delay giữa email (giây)", ' + configLookup + ', 2, FALSE), 3) & "s / thư"');
+  
+  dashSheet.getRange("C14").setValue("Kích thước mỗi đợt gửi");
+  dashSheet.getRange("D14").setFormula('=IFERROR(VLOOKUP("Batch size", ' + configLookup + ', 2, FALSE), 50) & " email"');
+  
+  dashSheet.getRange("C15").setValue("Thời gian nghỉ giữa đợt");
+  dashSheet.getRange("D15").setFormula('=IFERROR(VLOOKUP("Cooldown giữa batch (phút)", ' + configLookup + ', 2, FALSE), 5) & " phút"');
+  
+  dashSheet.getRange("C12:D15").setFontSize(10).setVerticalAlignment("middle").setBackground("#ffffff");
   dashSheet.getRange("C12:C15").setFontColor("#475569");
   dashSheet.getRange("D12:D15").setFontWeight("bold").setHorizontalAlignment("right").setFontColor("#0f172a");
   dashSheet.getRange("C11:D15").setBorder(true, true, true, true, true, true, "#e2e8f0", SpreadsheetApp.BorderStyle.SOLID);
@@ -354,22 +353,12 @@ function updateDashboard() {
   h3.setValue("TỰ ĐỘNG HÓA HỆ THỐNG");
   h3.setFontSize(10).setFontWeight("bold").setFontColor("#ffffff").setBackground("#334155").setVerticalAlignment("middle").setHorizontalAlignment("center");
   
-  var autoMode = config["Giờ gửi tự động"] || "Đã tắt";
-  var autoOwner = config["Người phụ trách gửi tự động"] || "Đã tắt";
-  var ownerShort = (autoOwner && autoOwner !== "Đã tắt") ? autoOwner.split("@")[0] + "@..." : "Chưa có";
+  dashSheet.getRange("E12").setFormula('="Lịch: " & IFERROR(VLOOKUP("Giờ gửi tự động", ' + configLookup + ', 2, FALSE), "Đã tắt")');
+  dashSheet.getRange("E13").setFormula('="Người gửi: " & IF(IFERROR(VLOOKUP("Người phụ trách gửi tự động", ' + configLookup + ', 2, FALSE), "Đã tắt")="Đã tắt", "Chưa có", IFERROR(REGEXEXTRACT(VLOOKUP("Người phụ trách gửi tự động", ' + configLookup + ', 2, FALSE), "^[^@]+"), "") & "@...")');
+  dashSheet.getRange("E14").setFormula('="Đã gửi hôm nay: " & IFERROR(VLOOKUP("Quota đã dùng hôm nay", ' + configLookup + ', 2, FALSE), 0) & " thư"');
+  dashSheet.getRange("E15").setFormula('="Hạn mức còn lại: " & MAX(0, 100 - IFERROR(VALUE(VLOOKUP("Quota đã dùng hôm nay", ' + configLookup + ', 2, FALSE)), 0))');
   
-  var m3 = [
-    ["Lịch: " + autoMode],
-    ["Người gửi: " + ownerShort],
-    ["Đã gửi hôm nay: " + quotaUsed + " thư"],
-    ["Hạn mức còn lại: " + quotaRemaining]
-  ];
-  dashSheet.getRange("E12:E15").setValues(m3)
-    .setFontSize(10)
-    .setVerticalAlignment("middle")
-    .setBackground("#ffffff")
-    .setHorizontalAlignment("center")
-    .setFontColor("#334155");
+  dashSheet.getRange("E12:E15").setFontSize(10).setVerticalAlignment("middle").setBackground("#ffffff").setHorizontalAlignment("center").setFontColor("#334155");
   dashSheet.getRange("E11:E15").setBorder(true, true, true, true, true, true, "#e2e8f0", SpreadsheetApp.BorderStyle.SOLID);
   
   // Dọn dẹp dòng bên dưới (từ hàng 16 trở đi)
