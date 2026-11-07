@@ -52,7 +52,9 @@ function getConfig() {
   
   for (var i = 1; i < data.length; i++) {
     var key = String(data[i][0]).trim();
-    var value = String(data[i][1]).trim();
+    var rawVal = data[i][1];
+    var value = (key === "Khung giờ tự động bắt đầu" || key === "Khung giờ tự động kết thúc") ? 
+                normalizeTimeString(rawVal) : String(rawVal).trim();
     if (key) {
       config[key] = value;
       var kLower = key.toLowerCase();
@@ -134,7 +136,9 @@ function syncConfigSheet() {
   var currentValues = {};
   for (var i = 1; i < data.length; i++) {
     var k = String(data[i][0]).trim();
-    var v = String(data[i][1]).trim();
+    var rawV = data[i][1];
+    var v = (k === "Khung giờ tự động bắt đầu" || k === "Khung giờ tự động kết thúc") ?
+            normalizeTimeString(rawV) : String(rawV).trim();
     if (k) {
       currentValues[k] = v;
     }
@@ -196,6 +200,11 @@ function syncConfigSheet() {
     }
     if (key === "Email đang gửi hiện tại") {
       val = unifiedSender;
+    }
+    
+    if (key === "Khung giờ tự động bắt đầu" || key === "Khung giờ tự động kết thúc") {
+      val = normalizeTimeString(val);
+      sheet.getRange(row, 2).setNumberFormat("@");
     }
     
     sheet.getRange(row, 1).setValue(key);

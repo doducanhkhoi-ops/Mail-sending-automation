@@ -24,8 +24,8 @@ function setupIntervalTrigger() {
   
   var activeUser = getCurrentUserEmail();
   
-  var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
-  var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
+  var startTime = normalizeTimeString(config["Khung giờ tự động bắt đầu"]);
+  var endTime = normalizeTimeString(config["Khung giờ tự động kết thúc"]);
   var timeWindowText = (startTime || endTime) ? " (" + (startTime || "00:00") + " - " + (endTime || "23:59") + ")" : " (24/7)";
   
   setConfig("Email đang gửi hiện tại", activeUser);
@@ -77,8 +77,8 @@ function setupFormSubmitTrigger() {
   
   // Đồng bộ ô 'Giờ gửi tự động' hiển thị rõ chế độ và khung giờ cho phép
   var config = getConfig();
-  var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
-  var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
+  var startTime = normalizeTimeString(config["Khung giờ tự động bắt đầu"]);
+  var endTime = normalizeTimeString(config["Khung giờ tự động kết thúc"]);
   var timeWindowText = (startTime || endTime) ? " (" + (startTime || "00:00") + " - " + (endTime || "23:59") + ")" : " (24/7)";
   setConfig("Giờ gửi tự động", "Tức thì (Realtime)" + timeWindowText);
   
@@ -185,8 +185,8 @@ function onFormSubmitTrigger(e) {
     var config = getConfig();
     
     // KIỂM TRA RÀNG BUỘC KHUNG GIỜ GỬI TỰ ĐỘNG
-    var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
-    var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
+    var startTime = normalizeTimeString(config["Khung giờ tự động bắt đầu"]);
+    var endTime = normalizeTimeString(config["Khung giờ tự động kết thúc"]);
     if (!isWithinAllowedTimeWindow(startTime, endTime)) {
       logInfo("Hiện tại ngoài khung giờ gửi tự động (" + startTime + " - " + endTime + "). Tạm hoãn gửi và hẹn giờ mở khung.");
       _scheduleWakeupAtStartTime(startTime);
@@ -285,8 +285,8 @@ function onIntervalTrigger() {
     var config = getConfig();
     
     // KIỂM TRA RÀNG BUỘC KHUNG GIỜ CHO CẢ TRIGGER 15 PHÚT
-    var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
-    var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
+    var startTime = normalizeTimeString(config["Khung giờ tự động bắt đầu"]);
+    var endTime = normalizeTimeString(config["Khung giờ tự động kết thúc"]);
     if (!isWithinAllowedTimeWindow(startTime, endTime)) {
       logInfo("Trigger 15 phút: Hiện tại ngoài khung giờ (" + startTime + " - " + endTime + "). Tạm hoãn gửi và tự động hẹn giờ mở khung.");
       _scheduleWakeupAtStartTime(startTime);
@@ -392,9 +392,10 @@ function listTriggers() {
  * Có cơ chế tự động làm mới nếu người dùng thay đổi khung giờ trong bảng Cấu hình
  */
 function _scheduleWakeupAtStartTime(startTimeStr) {
-  if (!startTimeStr) return;
+  var cleanStart = normalizeTimeString(startTimeStr);
+  if (!cleanStart) return;
   
-  var parts = String(startTimeStr).trim().split(":");
+  var parts = cleanStart.split(":");
   if (parts.length < 2) return;
   var targetHour = parseInt(parts[0], 10);
   var targetMinute = parseInt(parts[1], 10);
@@ -463,8 +464,8 @@ function onScheduledStartTrigger() {
   logInfo("Đồng hồ đã điểm đúng khung giờ gửi tự động. Bắt đầu quét hàng chờ...");
   
   var config = getConfig();
-  var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
-  var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
+  var startTime = normalizeTimeString(config["Khung giờ tự động bắt đầu"]);
+  var endTime = normalizeTimeString(config["Khung giờ tự động kết thúc"]);
   
   // Xử lý bù độ lệch sớm (Jitter Protection):
   // Nếu Google Apps Script kích hoạt sớm vài chục giây trước giờ mở khung:

@@ -57,17 +57,54 @@ function escapeRegex(str) {
 }
 
 /**
+ * Chuẩn hóa giá trị thời gian thành chuỗi HH:mm (ví dụ "09:00")
+ * Xử lý hoàn hảo mọi kiểu dữ liệu từ Google Sheets: Date object, chuỗi ngày dài (Sat Dec 30 1899...), chuỗi text
+ */
+function normalizeTimeString(val) {
+  if (!val) return "";
+  if (val instanceof Date) {
+    return Utilities.formatDate(val, "Asia/Ho_Chi_Minh", "HH:mm");
+  }
+  var str = String(val).trim();
+  if (!str) return "";
+  
+  // Nếu là chuỗi ngày dài dạng: "Sat Dec 30 1899 09:00:00 GMT+0706..." hoặc ISO
+  var match = str.match(/(?:^|\s|T)(\d{1,2}):(\d{2})(?::\d{2})?(?:\s|$|\+)/);
+  if (match) {
+    var h = parseInt(match[1], 10);
+    var m = match[2];
+    var hStr = (h < 10 ? "0" : "") + h;
+    return hStr + ":" + m;
+  }
+  
+  // Nếu dạng "9:00" hoặc "09:00"
+  var simpleParts = str.split(":");
+  if (simpleParts.length >= 2) {
+    var sh = parseInt(simpleParts[0], 10);
+    var sm = parseInt(simpleParts[1], 10);
+    if (!isNaN(sh) && !isNaN(sm)) {
+      return (sh < 10 ? "0" : "") + sh + ":" + (sm < 10 ? "0" : "") + sm;
+    }
+  }
+  
+  return str;
+}
+
+/**
  * Kiểm tra xem thời điểm hiện tại có nằm trong khung giờ cho phép gửi tự động không
- * @param {String} startTimeStr - Định dạng "HH:mm" (ví dụ "08:00")
- * @param {String} endTimeStr - Định dạng "HH:mm" (ví dụ "21:30")
+ * @param {String|Date} startTimeStr - Định dạng "HH:mm" hoặc Date object
+ * @param {String|Date} endTimeStr - Định dạng "HH:mm" hoặc Date object
  * @returns {Boolean} true nếu được phép gửi
  */
 function isWithinAllowedTimeWindow(startTimeStr, endTimeStr) {
-  if (!startTimeStr && !endTimeStr) return true; // Không cấu hình nghĩa là gửi 24/24
+  var start = normalizeTimeString(startTimeStr);
+  var end = normalizeTimeString(endTimeStr);
+  
+  if (!start && !end) return true; // Không cấu hình nghĩa là gửi 24/24
   
   var nowStr = Utilities.formatDate(new Date(), "Asia/Ho_Chi_Minh", "HH:mm");
-  var start = startTimeStr ? String(startTimeStr).trim() : "00:00";
-  var end = endTimeStr ? String(endTimeStr).trim() : "23:59";
+  start = start || "00:00";
+  end = end || "23:59";
   
   if (start <= end) {
     return nowStr >= start && nowStr <= end;
