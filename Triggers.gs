@@ -401,12 +401,17 @@ function _scheduleWakeupAtStartTime(startTimeStr) {
   var targetMinute = parseInt(parts[1], 10);
   if (isNaN(targetHour) || isNaN(targetMinute)) return;
   
-  var now = new Date();
-  var targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetHour, targetMinute, 0);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var tz = (ss && ss.getSpreadsheetTimeZone()) ? ss.getSpreadsheetTimeZone() : "Asia/Ho_Chi_Minh";
   
-  // Nếu giờ này hôm nay đã qua thì tính cho ngày hôm sau
-  if (targetDate <= now) {
-    targetDate.setDate(targetDate.getDate() + 1);
+  var now = new Date();
+  var dateStr = Utilities.formatDate(now, tz, "yyyy/MM/dd");
+  var timeStr = (targetHour < 10 ? "0" : "") + targetHour + ":" + (targetMinute < 10 ? "0" : "") + targetMinute + ":00";
+  var targetDate = Utilities.parseDate(dateStr + " " + timeStr, tz, "yyyy/MM/dd HH:mm:ss");
+  
+  // Nếu giờ này hôm nay đã qua thì cộng thêm 1 ngày (24 giờ)
+  if (targetDate.getTime() <= now.getTime()) {
+    targetDate = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
   }
   
   var props = PropertiesService.getScriptProperties();
@@ -474,9 +479,13 @@ function onScheduledStartTrigger() {
     if (parts.length >= 2) {
       var targetH = parseInt(parts[0], 10);
       var targetM = parseInt(parts[1], 10);
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var tz = (ss && ss.getSpreadsheetTimeZone()) ? ss.getSpreadsheetTimeZone() : "Asia/Ho_Chi_Minh";
       var now = new Date();
-      var targetToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetH, targetM, 0);
-      var diffMs = targetToday.getTime() - now.getTime();
+      var dateStr = Utilities.formatDate(now, tz, "yyyy/MM/dd");
+      var timeStr = (targetH < 10 ? "0" : "") + targetH + ":" + (targetM < 10 ? "0" : "") + targetM + ":00";
+      var targetToday = Utilities.parseDate(dateStr + " " + timeStr, tz, "yyyy/MM/dd HH:mm:ss");
+      var diffMs = targetToday ? (targetToday.getTime() - now.getTime()) : 0;
       
       // Nếu kích hoạt sớm dưới 3 phút: Tạm nghỉ chính xác số mili-giây còn lại để chạm đúng 09:00:01
       if (diffMs > 0 && diffMs <= 180000) {
