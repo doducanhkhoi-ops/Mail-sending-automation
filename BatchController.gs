@@ -209,24 +209,30 @@ function _sendCompletionNotification(config) {
     var done = all.filter(function(r) { return r.status && (r.status.startsWith("Done") || r.status.startsWith("Đã gửi") || r.status.startsWith("Thành công") || r.status.startsWith("✅")); }).length;
     var errors = all.filter(function(r) { return r.status && (r.status.startsWith("Lỗi") || r.status.startsWith("❌")); }).length;
     
+    var notifOptions = {
+      htmlBody: '<div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 6px;">' +
+        '<h3 style="color: #2c3e50; margin-top: 0;">Thông báo hoàn tất gửi email</h3>' +
+        '<p style="color: #555; font-size: 14px;">Hệ thống đã hoàn tất gửi toàn bộ danh sách email theo cấu hình.</p>' +
+        '<table style="border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 15px;">' +
+        '<tr style="background-color: #f8f9fa;"><td style="padding: 10px; border: 1px solid #e9ecef; font-weight: bold;">Thành công</td>' +
+        '<td style="padding: 10px; border: 1px solid #e9ecef; color: #28a745; font-weight: bold;">' + done + '</td></tr>' +
+        '<tr><td style="padding: 10px; border: 1px solid #e9ecef; font-weight: bold;">Lỗi phát sinh</td>' +
+        '<td style="padding: 10px; border: 1px solid #e9ecef; color: #dc3545;">' + errors + '</td></tr>' +
+        '<tr style="background-color: #f8f9fa;"><td style="padding: 10px; border: 1px solid #e9ecef; font-weight: bold;">Tổng số lượng</td>' +
+        '<td style="padding: 10px; border: 1px solid #e9ecef;">' + all.length + '</td></tr>' +
+        '<tr><td style="padding: 10px; border: 1px solid #e9ecef; font-weight: bold;">Thời điểm hoàn tất</td>' +
+        '<td style="padding: 10px; border: 1px solid #e9ecef;">' + formatDateVN(new Date()) + '</td></tr>' +
+        '</table></div>'
+    };
+    var senderName = config["Tên người gửi (Sender Name)"] || config["Tên người gửi"] || config["Sender Name"];
+    if (senderName && String(senderName).trim()) {
+      notifOptions.name = String(senderName).trim();
+    }
+    
     GmailApp.sendEmail(testEmail,
       "Báo cáo hoàn tất gửi email tự động - " + formatDateVN(new Date()),
       "",
-      {
-        htmlBody: '<div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 6px;">' +
-          '<h3 style="color: #2c3e50; margin-top: 0;">Thông báo hoàn tất gửi email</h3>' +
-          '<p style="color: #555; font-size: 14px;">Hệ thống đã hoàn tất gửi toàn bộ danh sách email theo cấu hình.</p>' +
-          '<table style="border-collapse: collapse; width: 100%; font-size: 14px; margin-top: 15px;">' +
-          '<tr style="background-color: #f8f9fa;"><td style="padding: 10px; border: 1px solid #e9ecef; font-weight: bold;">Thành công</td>' +
-          '<td style="padding: 10px; border: 1px solid #e9ecef; color: #28a745; font-weight: bold;">' + done + '</td></tr>' +
-          '<tr><td style="padding: 10px; border: 1px solid #e9ecef; font-weight: bold;">Lỗi phát sinh</td>' +
-          '<td style="padding: 10px; border: 1px solid #e9ecef; color: #dc3545;">' + errors + '</td></tr>' +
-          '<tr style="background-color: #f8f9fa;"><td style="padding: 10px; border: 1px solid #e9ecef; font-weight: bold;">Tổng số lượng</td>' +
-          '<td style="padding: 10px; border: 1px solid #e9ecef;">' + all.length + '</td></tr>' +
-          '<tr><td style="padding: 10px; border: 1px solid #e9ecef; font-weight: bold;">Thời điểm hoàn tất</td>' +
-          '<td style="padding: 10px; border: 1px solid #e9ecef;">' + formatDateVN(new Date()) + '</td></tr>' +
-          '</table></div>'
-      }
+      notifOptions
     );
   } catch(e) {
     logError("Lỗi khi gửi email thông báo: " + e.message);

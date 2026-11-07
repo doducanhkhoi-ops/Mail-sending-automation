@@ -15,6 +15,7 @@ var SHEET_DASH_LEGACY = "📈 Dashboard";
 // Giá trị cấu hình mặc định tinh gọn chuẩn MECE (Cột A)
 var CONFIG_DEFAULTS = {
   "Tiêu đề thư nháp Gmail":   "",
+  "Tên người gửi (Sender Name)": "",
   "Delay giữa email (giây)": "3",
   "Batch size":              "50",
   "Cooldown giữa batch (phút)": "5",
@@ -145,12 +146,18 @@ function syncConfigSheet() {
                      (currentValues["Chế độ nội dung"] === "draft_by_subject" ? currentValues["Tiêu đề email"] : "") || 
                      CONFIG_DEFAULTS["Tiêu đề thư nháp Gmail"];
                      
+  var unifiedSenderName = currentValues["Tên người gửi (Sender Name)"] || 
+                          currentValues["Tên người gửi"] || 
+                          currentValues["Sender Name"] || 
+                          CONFIG_DEFAULTS["Tên người gửi (Sender Name)"];
+                     
   var unifiedSender = currentValues["Email đang gửi hiện tại"] ||
                       currentValues["Người phụ trách gửi tự động"] ||
                       CONFIG_DEFAULTS["Email đang gửi hiện tại"];
   
   var descriptions = {
     "Tiêu đề thư nháp Gmail":   "Tên thư nháp trong Gmail để làm mẫu (ĐỂ TRỐNG = Tự động lấy thư nháp mới nhất)",
+    "Tên người gửi (Sender Name)": "Tên đại diện hiển thị trong hộp thư người nhận (ĐỂ TRỐNG = Tên tài khoản Google mặc định)",
     "Delay giữa email (giây)": "Thời gian giãn cách giữa mỗi email (khuyến nghị từ 2 đến 5 giây)",
     "Batch size":              "Số lượng email tối đa trong mỗi đợt gửi (khuyến nghị 50)",
     "Cooldown giữa batch (phút)": "Thời gian tạm nghỉ giữa các đợt gửi khi gửi hàng loạt",
@@ -183,6 +190,9 @@ function syncConfigSheet() {
     var val = (currentValues[key] !== undefined && currentValues[key] !== "") ? currentValues[key] : CONFIG_DEFAULTS[key];
     if (key === "Tiêu đề thư nháp Gmail") {
       val = unifiedDraft;
+    }
+    if (key === "Tên người gửi (Sender Name)") {
+      val = unifiedSenderName;
     }
     if (key === "Email đang gửi hiện tại") {
       val = unifiedSender;

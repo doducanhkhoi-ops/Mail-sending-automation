@@ -30,6 +30,11 @@ function sendSingleEmail(recipient, emailContent, config, batchNum) {
       htmlBody: personalBody
     };
     
+    var senderName = config["Tên người gửi (Sender Name)"] || config["Tên người gửi"] || config["Sender Name"];
+    if (senderName && String(senderName).trim()) {
+      options.name = String(senderName).trim();
+    }
+    
     if (config["CC"]) options.cc = config["CC"];
     if (config["BCC"]) options.bcc = config["BCC"];
     
@@ -117,6 +122,11 @@ function sendTestEmail() {
     body = testBanner + body;
     
     var options = { htmlBody: body };
+    var senderName = config["Tên người gửi (Sender Name)"] || config["Tên người gửi"] || config["Sender Name"];
+    if (senderName && String(senderName).trim()) {
+      options.name = String(senderName).trim();
+    }
+    
     if (emailContent.attachments && emailContent.attachments.length > 0) {
       options.attachments = emailContent.attachments;
     }
