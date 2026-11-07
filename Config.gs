@@ -12,19 +12,16 @@ var SHEET_LOG_LEGACY = "📊 Lịch sử";
 var SHEET_DASH     = "Dashboard";
 var SHEET_DASH_LEGACY = "📈 Dashboard";
 
-// Giá trị cấu hình mặc định (Cột A)
+// Giá trị cấu hình mặc định tinh gọn chuẩn MECE (Cột A)
 var CONFIG_DEFAULTS = {
-  "Chế độ nội dung":         "draft_first",    // manual | draft_first | draft_by_subject
-  "Tiêu đề email":           "Thông báo quan trọng",
-  "Nội dung HTML":           "",
-  "Tiêu đề bản nháp":        "",
+  "Tiêu đề thư nháp Gmail":   "",
   "Delay giữa email (giây)": "3",
   "Batch size":              "50",
   "Cooldown giữa batch (phút)": "5",
   "Khung giờ tự động bắt đầu": "",
   "Khung giờ tự động kết thúc": "",
   "Người phụ trách gửi tự động": "Đã tắt",
-  "Giờ gửi tự động":         "",
+  "Giờ gửi tự động":         "Đã tắt",
   "CC":                      "",
   "BCC":                     "",
   "Email test":              "",
@@ -60,14 +57,8 @@ function getConfig() {
     if (key) {
       config[key] = value;
       var kLower = key.toLowerCase();
-      if (kLower.indexOf("nháp") !== -1 || kLower.indexOf("draft") !== -1) {
-        config["Tiêu đề bản nháp"] = config["Tiêu đề bản nháp"] || value;
-      }
-      if (kLower.indexOf("tiêu đề email") !== -1 || kLower.indexOf("tiêu đề thư") !== -1) {
-        config["Tiêu đề email"] = config["Tiêu đề email"] || value;
-      }
-      if (kLower.indexOf("chế độ") !== -1 || kLower.indexOf("mode") !== -1) {
-        config["Chế độ nội dung"] = config["Chế độ nội dung"] || value;
+      if (!config["Tiêu đề thư nháp Gmail"] && (kLower.indexOf("nháp") !== -1 || kLower.indexOf("draft") !== -1 || kLower.indexOf("tiêu đề email") !== -1)) {
+        config["Tiêu đề thư nháp Gmail"] = value;
       }
     }
   }
@@ -127,27 +118,44 @@ function hasQuotaRemaining() {
 }
 
 /**
- * Khởi tạo cấu trúc bảng Cấu hình mặc định
+ * Đồng bộ và nâng cấp bảng Cấu hình sang chuẩn MECE
+ * Tự động loại bỏ các tham số cũ dư thừa (Tiêu đề email, Chế độ nội dung, Nội dung HTML)
+ * Bảo lưu toàn bộ dữ liệu cấu hình thực tế của người dùng
  */
-function _initConfigSheet(ss) {
-  var sheet = ss.insertSheet(SHEET_CONFIG);
+function syncConfigSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = findSheet(ss, SHEET_CONFIG, SHEET_CONFIG_LEGACY);
+  if (!sheet) {
+    sheet = _initConfigSheet(ss);
+    return sheet;
+  }
   
-  sheet.getRange("A1:C1").setValues([["Tham số", "Giá trị thiết lập", "Giải thích"]]);
-  sheet.getRange("A1:C1").setFontWeight("bold")
-    .setBackground("#1a365d").setFontColor("#ffffff");
+  // 1. Đọc toàn bộ giá trị hiện tại của người dùng
+  var data = sheet.getDataRange().getValues();
+  var currentValues = {};
+  for (var i = 1; i < data.length; i++) {
+    var k = String(data[i][0]).trim();
+    var v = String(data[i][1]).trim();
+    if (k) {
+      currentValues[k] = v;
+    }
+  }
+  
+  // 2. Kế thừa thông minh từ các khóa cũ sang khóa MECE mới
+  var unifiedDraft = currentValues["Tiêu đề thư nháp Gmail"] || 
+                     currentValues["Tiêu đề bản nháp"] || 
+                     (currentValues["Chế độ nội dung"] === "draft_by_subject" ? currentValues["Tiêu đề email"] : "") || 
+                     CONFIG_DEFAULTS["Tiêu đề thư nháp Gmail"];
   
   var descriptions = {
-    "Chế độ nội dung":         "Chế độ lấy nội dung: manual (nhập HTML bên dưới), draft_first (thư nháp mới nhất), draft_by_subject (tìm theo tiêu đề)",
-    "Tiêu đề email":           "Hỗ trợ biến thay thế như {{Tên}}, {{Email}}",
-    "Nội dung HTML":           "Nội dung email định dạng HTML (chỉ áp dụng khi chọn chế độ manual)",
-    "Tiêu đề bản nháp":        "Tiêu đề thư nháp trong Gmail (chỉ áp dụng khi chọn chế độ draft_by_subject)",
-    "Delay giữa email (giây)": "Thời gian giãn cách giữa mỗi email (khuyến nghị từ 5 đến 10 giây)",
+    "Tiêu đề thư nháp Gmail":   "Tên thư nháp trong Gmail để làm mẫu (ĐỂ TRỐNG = Tự động lấy thư nháp mới nhất)",
+    "Delay giữa email (giây)": "Thời gian giãn cách giữa mỗi email (khuyến nghị từ 2 đến 5 giây)",
     "Batch size":              "Số lượng email tối đa trong mỗi đợt gửi (khuyến nghị 50)",
-    "Cooldown giữa batch (phút)": "Thời gian tạm nghỉ giữa các đợt gửi",
+    "Cooldown giữa batch (phút)": "Thời gian tạm nghỉ giữa các đợt gửi khi gửi hàng loạt",
     "Khung giờ tự động bắt đầu": "Giờ bắt đầu gửi tự động (định dạng HH:mm, ví dụ 08:00, ĐỂ TRỐNG = Gửi mọi lúc 24/7)",
     "Khung giờ tự động kết thúc": "Giờ kết thúc gửi tự động (định dạng HH:mm, ví dụ 21:30, ĐỂ TRỐNG = Gửi mọi lúc 24/7)",
-    "Người phụ trách gửi tự động": "Email tài khoản Google hiện đang chịu trách nhiệm gửi tự động",
-    "Giờ gửi tự động":         "Chế độ chạy tự động: Tức thì (Realtime) / Mỗi 15 phút / Đã tắt (kèm khung giờ hoạt động)",
+    "Người phụ trách gửi tự động": "Email tài khoản Google hiện đang chịu trách nhiệm gửi tự động (Hệ thống tự cập nhật)",
+    "Giờ gửi tự động":         "Chế độ chạy tự động: Tức thì (Realtime) / Mỗi 15 phút / Đã tắt (Hệ thống tự cập nhật)",
     "CC":                      "Danh sách địa chỉ nhận CC (phân cách bằng dấu phẩy)",
     "BCC":                     "Danh sách địa chỉ nhận BCC (phân cách bằng dấu phẩy)",
     "Email test":              "Địa chỉ email nhận thư kiểm tra trước khi gửi hàng loạt",
@@ -156,26 +164,60 @@ function _initConfigSheet(ss) {
     "Trạng thái hệ thống":     "Hệ thống tự động cập nhật: Sẵn sàng / Đang gửi... / Tạm dừng / Hoàn tất"
   };
   
+  // 3. Xóa validation cũ và xóa sạch nội dung cũ để ghi lại chuẩn MECE
+  sheet.getRange("B2:B30").clearDataValidations();
+  sheet.clearContents();
+  sheet.clearFormats();
+  
+  // 4. Ghi tiêu đề cột
+  sheet.getRange("A1:C1").setValues([["Tham số", "Giá trị thiết lập", "Giải thích"]]);
+  sheet.getRange("A1:C1").setFontWeight("bold")
+    .setBackground("#0f172a").setFontColor("#ffffff")
+    .setFontSize(11).setVerticalAlignment("middle");
+  sheet.setRowHeight(1, 36);
+  sheet.setFrozenRows(1);
+  
+  // 5. Ghi từng dòng tham số chuẩn MECE
   var row = 2;
   for (var key in CONFIG_DEFAULTS) {
+    var val = (currentValues[key] !== undefined && currentValues[key] !== "") ? currentValues[key] : CONFIG_DEFAULTS[key];
+    if (key === "Tiêu đề thư nháp Gmail") {
+      val = unifiedDraft;
+    }
+    
     sheet.getRange(row, 1).setValue(key);
-    sheet.getRange(row, 2).setValue(CONFIG_DEFAULTS[key]);
+    sheet.getRange(row, 2).setValue(val);
     sheet.getRange(row, 3).setValue(descriptions[key] || "");
+    
+    var bg = (row % 2 === 0) ? "#ffffff" : "#f8fafc";
+    sheet.getRange(row, 1).setBackground(bg).setFontColor("#0f172a").setFontWeight("bold").setFontSize(10).setVerticalAlignment("middle");
+    sheet.getRange(row, 2).setBackground("#f1f5f9").setFontColor("#0f172a").setFontSize(10).setVerticalAlignment("middle");
+    sheet.getRange(row, 3).setBackground(bg).setFontColor("#64748b").setFontSize(9.5).setVerticalAlignment("middle");
+    sheet.setRowHeight(row, 28);
     row++;
   }
   
-  sheet.setColumnWidth(1, 250);
-  sheet.setColumnWidth(2, 350);
+  var totalRows = row - 1;
+  sheet.getRange(2, 1, totalRows - 1, 3).setBorder(true, true, true, true, true, true, "#e2e8f0", SpreadsheetApp.BorderStyle.SOLID);
+  sheet.setColumnWidth(1, 260);
+  sheet.setColumnWidth(2, 360);
   sheet.setColumnWidth(3, 520);
-  sheet.getRange("A2:A" + (row - 1)).setFontWeight("bold");
   
-  var modeCell = sheet.getRange("B2");
-  var modeRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(["manual", "draft_first", "draft_by_subject"])
-    .setAllowInvalid(false).build();
-  modeCell.setDataValidation(modeRule);
+  // Dọn sạch các dòng thừa phía dưới nếu có
+  var maxRows = sheet.getMaxRows();
+  if (maxRows > totalRows) {
+    sheet.getRange(totalRows + 1, 1, maxRows - totalRows, sheet.getMaxColumns()).clearContent().clearFormat();
+  }
   
   return sheet;
+}
+
+/**
+ * Khởi tạo cấu trúc bảng Cấu hình mặc định
+ */
+function _initConfigSheet(ss) {
+  var sheet = ss.insertSheet(SHEET_CONFIG);
+  return syncConfigSheet();
 }
 
 /**

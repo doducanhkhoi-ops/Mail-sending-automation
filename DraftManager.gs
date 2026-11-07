@@ -3,50 +3,23 @@
 // ============================================
 
 /**
- * Lấy nội dung email theo chế độ đã thiết lập trong bảng Cấu hình
+ * Lấy nội dung email trực tiếp từ thư nháp Gmail
+ * Chuẩn MECE: Có điền tên -> tìm theo tên; Để trống -> tự động lấy thư nháp mới nhất
  * @param {Object} config - Bảng cấu hình
  * @returns {Object|null} { subject, htmlBody, attachments, inlineImages }
  */
 function getEmailContent(config) {
-  var mode = String(config["Chế độ nội dung"] || "draft_first").trim().toLowerCase();
+  var searchSubject = (config["Tiêu đề thư nháp Gmail"] || config["Tiêu đề bản nháp"] || "").trim();
   
-  switch (mode) {
-    case "manual":
-      return _getManualContent(config);
-    case "draft_first":
-      return _getFirstDraft();
-    case "draft_by_subject":
-      var searchSubject = (config["Tiêu đề bản nháp"] || config["Tiêu đề email"] || "").trim();
-      return _getDraftBySubject(searchSubject);
-    default:
-      logError("Chế độ nội dung không hợp lệ: " + mode);
-      return null;
+  if (searchSubject) {
+    return _getDraftBySubject(searchSubject);
+  } else {
+    return _getFirstDraft();
   }
 }
 
 /**
- * Chế độ manual: Lấy nội dung trực tiếp từ bảng Cấu hình
- */
-function _getManualContent(config) {
-  var subject = config["Tiêu đề email"] || "Thông báo";
-  var htmlBody = config["Nội dung HTML"] || "";
-  
-  if (!htmlBody) {
-    logError("Chế độ 'manual' yêu cầu nhập Nội dung HTML trong bảng Cấu hình.");
-    showAlert("Chưa có nội dung HTML", "Bạn đang chọn chế độ 'manual' nhưng chưa nhập Nội dung HTML trong bảng Cấu hình.");
-    return null;
-  }
-  
-  return {
-    subject: subject,
-    htmlBody: htmlBody,
-    attachments: [],
-    inlineImages: {}
-  };
-}
-
-/**
- * Chế độ draft_first: Lấy thư nháp mới nhất trong Gmail
+ * Lấy thư nháp mới nhất trong Gmail (khi để trống Tiêu đề thư nháp Gmail)
  */
 function _getFirstDraft() {
   var drafts = GmailApp.getDrafts();
@@ -74,12 +47,12 @@ function _normalizeText(str) {
 }
 
 /**
- * Chế độ draft_by_subject: Tìm thư nháp theo tiêu đề
+ * Tìm thư nháp theo tiêu đề (khi có nhập Tiêu đề thư nháp Gmail)
  */
 function _getDraftBySubject(searchSubject) {
   if (!searchSubject) {
-    logError("Chưa nhập 'Tiêu đề bản nháp' trong bảng Cấu hình.");
-    showAlert("Chưa nhập tiêu đề", "Vui lòng nhập 'Tiêu đề bản nháp' (hoặc 'Tiêu đề email') trong bảng Cấu hình để hệ thống tìm kiếm trong Gmail.");
+    logError("Chưa nhập 'Tiêu đề thư nháp Gmail' trong bảng Cấu hình.");
+    showAlert("Chưa nhập tiêu đề", "Vui lòng nhập 'Tiêu đề thư nháp Gmail' trong bảng Cấu hình (hoặc để trống để tự động lấy thư nháp mới nhất).");
     return null;
   }
   
@@ -125,7 +98,7 @@ function _getDraftBySubject(searchSubject) {
   
   var msgError = "Không tìm thấy thư nháp nào khớp với: \"" + searchSubject + "\"\n\n" +
                  "Các thư nháp hiện có trong Gmail của bạn:\n" + draftList.join("\n") + "\n\n" +
-                 "Vui lòng copy đúng tên thư nháp ở trên dán vào ô 'Tiêu đề bản nháp' trong sheet Cấu hình.";
+                 "Vui lòng copy đúng tên thư nháp ở trên dán vào ô 'Tiêu đề thư nháp Gmail' trong sheet Cấu hình (hoặc xóa trắng ô này để lấy thư nháp mới nhất).";
   
   logError(msgError);
   showAlert("Không tìm thấy thư nháp", msgError);

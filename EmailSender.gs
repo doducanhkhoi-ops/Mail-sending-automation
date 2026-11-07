@@ -23,15 +23,7 @@ function sendSingleEmail(recipient, emailContent, config, batchNum) {
       return false;
     }
     
-    var personalSubject = replaceTemplateVars(
-      config["Tiêu đề email"] || emailContent.subject,
-      recipient.data
-    );
-    
-    if (config["Chế độ nội dung"] !== "manual" && emailContent.subject) {
-      personalSubject = replaceTemplateVars(emailContent.subject, recipient.data);
-    }
-    
+    var personalSubject = replaceTemplateVars(emailContent.subject, recipient.data);
     var personalBody = replaceTemplateVars(emailContent.htmlBody, recipient.data);
     
     var options = {
@@ -88,7 +80,7 @@ function sendTestEmail() {
   
   var emailContent = getEmailContent(config);
   if (!emailContent) {
-    showAlert("Lỗi nội dung", "Không thể lấy nội dung email. Vui lòng kiểm tra lại thiết lập chế độ nội dung.");
+    showAlert("Không tìm thấy thư nháp", "Không thể lấy nội dung thư nháp từ Gmail.\n\nVui lòng kiểm tra lại thư nháp trong Gmail của bạn.");
     return;
   }
   
@@ -116,15 +108,7 @@ function sendTestEmail() {
   }
   
   try {
-    var subject = replaceTemplateVars(
-      config["Tiêu đề email"] || emailContent.subject,
-      testRecipient.data
-    );
-    
-    if (config["Chế độ nội dung"] !== "manual" && emailContent.subject) {
-      subject = replaceTemplateVars(emailContent.subject, testRecipient.data);
-    }
-    
+    var subject = replaceTemplateVars(emailContent.subject, testRecipient.data);
     var body = replaceTemplateVars(emailContent.htmlBody, testRecipient.data);
     
     var testBanner = '<div style="background: #f8fafc; color: #334155; border-left: 4px solid #2563eb; padding: 12px 16px; margin-bottom: 20px; font-family: sans-serif; font-size: 13px; line-height: 1.5;">' +

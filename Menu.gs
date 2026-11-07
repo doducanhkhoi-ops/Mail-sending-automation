@@ -26,6 +26,7 @@ function onOpen() {
       )
       .addSubMenu(ui.createMenu("Tiện ích")
         .addItem("Cập nhật Dashboard", "menuUpdateDashboard")
+        .addItem("Đồng bộ & Làm sạch bảng Cấu hình", "menuSyncConfig")
         .addItem("Làm đẹp toàn bộ bảng tính", "menuFormatAllSheets")
         .addItem("Kiểm tra email trùng lặp", "menuCheckDuplicates")
         .addItem("Danh sách thư nháp Gmail", "menuListDrafts")
@@ -100,6 +101,11 @@ function menuRemoveAllTriggers() {
 function menuUpdateDashboard() {
   updateDashboard();
   showToast("Đã cập nhật số liệu Dashboard.", "Dashboard");
+}
+
+function menuSyncConfig() {
+  syncConfigSheet();
+  showToast("Đã đồng bộ và làm sạch bảng Cấu hình theo chuẩn tinh gọn MECE.", "Cấu hình MECE");
 }
 
 function menuFormatAllSheets() {

@@ -29,6 +29,7 @@ Sau khi mở bảng tính, thanh công cụ sẽ hiển thị menu **`Hệ thố
   * **Xóa toàn bộ trigger:** Hủy bỏ toàn bộ lịch hẹn giờ ngầm.
 * **Menu `Tiện ích`:**
   * **Cập nhật Dashboard:** Làm mới các thẻ chỉ số KPI, thanh tiến độ Sparkline và bảng hiệu suất.
+  * **Đồng bộ & Làm sạch bảng Cấu hình:** Tự động loại bỏ các tham số cũ dư thừa (như Tiêu đề email, Chế độ nội dung), đưa bảng Cấu hình về chuẩn MECE tinh gọn mà vẫn bảo lưu dữ liệu đã cài đặt.
   * **Làm đẹp toàn bộ bảng tính:** 1-Click đồng bộ font chữ, màu sắc, viền ô và định dạng có điều kiện chuyên nghiệp (Non-AI) cho cả 4 bảng tính.
   * **Kiểm tra email trùng lặp:** Quét và cảnh báo các địa chỉ email xuất hiện nhiều lần.
   * **Danh sách thư nháp Gmail:** Liệt kê chính xác danh sách tên các thư nháp hiện có trong Gmail của bạn.
@@ -49,9 +50,9 @@ Hệ thống được quản lý mã nguồn tập trung qua Thư viện (Librar
 3. Dán mã Script ID ở trên vào ô tìm kiếm và nhấn **Tra cứu**.
 4. Cấu hình 2 thông số:
    * **Mã định danh (Identifier):** Đổi tên thành chính xác chữ **`EmailSystem`** (viết liền, đúng chữ hoa/thường).
-   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`19`**.
+   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`20`**.
    * Nhấn nút **Thêm (Add)**.
-   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **19** và bấm **Lưu**).*
+   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **20** và bấm **Lưu**).*
 5. Xóa toàn bộ nội dung cũ trong trình soạn thảo, sau đó dán đoạn mã cầu nối sau vào:
 
 ```javascript
@@ -67,6 +68,7 @@ function menuToggleFormSubmit() { EmailSystem.menuToggleFormSubmit(); }
 function menuListTriggers() { EmailSystem.menuListTriggers(); }
 function menuRemoveAllTriggers() { EmailSystem.menuRemoveAllTriggers(); }
 function menuUpdateDashboard() { EmailSystem.menuUpdateDashboard(); }
+function menuSyncConfig() { EmailSystem.menuSyncConfig(); }
 function menuFormatAllSheets() { EmailSystem.menuFormatAllSheets(); }
 function menuCheckDuplicates() { EmailSystem.menuCheckDuplicates(); }
 function menuListDrafts() { EmailSystem.menuListDrafts(); }
@@ -84,13 +86,14 @@ function onFormSubmitTrigger(e) { EmailSystem.onFormSubmitTrigger(e); }
 
 ## 4. Cấu trúc các bảng tính
 
-* **Cấu hình:** Nơi thiết lập các tham số hệ thống:
-  * `Chế độ nội dung`: `draft_first` (thư nháp mới nhất), `draft_by_subject` (tìm theo tiêu đề), hoặc `manual` (nội dung HTML trực tiếp).
-  * `Tiêu đề bản nháp`: Tiêu đề thư nháp trong Gmail (hỗ trợ tìm kiếm thông minh và Unicode tiếng Việt).
+* **Cấu hình:** Nơi thiết lập các tham số hệ thống tinh gọn:
+  * `Tiêu đề thư nháp Gmail`: Tiêu đề thư nháp trong Gmail để làm mẫu (ĐỂ TRỐNG = Tự động lấy thư nháp mới nhất).
   * `Delay giữa email (giây)`: Thời gian giãn cách giữa mỗi email (khuyến nghị 2 - 5s).
   * `Batch size`: Số lượng email tối đa trong mỗi đợt gửi (khuyến nghị 50).
-  * `Cooldown giữa batch (phút)`: Thời gian tạm nghỉ giữa các đợt gửi.
-  * `Khung giờ tự động bắt đầu` / `Khung giờ tự động kết thúc`: Ràng buộc thời gian (ví dụ: `08:00` - `21:30`) chỉ áp dụng cho tự động gửi, tránh làm phiền ngoài giờ.
+  * `Cooldown giữa batch (phút)`: Thời gian tạm nghỉ giữa các đợt gửi khi gửi hàng loạt.
+  * `Khung giờ tự động bắt đầu` / `Khung giờ tự động kết thúc`: Khung giờ cho phép gửi (định dạng HH:mm, ĐỂ TRỐNG = Gửi mọi lúc 24/7).
+  * `Người phụ trách gửi tự động`: Email tài khoản hiện đang bật gửi tự động (Hệ thống tự cập nhật).
+  * `Giờ gửi tự động`: Chế độ tự động hiện tại (Tức thì / Mỗi 15 phút / Đã tắt) (Hệ thống tự cập nhật).
   * `Email test`: Địa chỉ email nhận bản thử nghiệm và nhận thông báo khi hoàn tất.
 * **Danh sách:** Dữ liệu người nhận. Cột đầu tiên là `Email`, có một cột tiêu đề là `Trạng thái`. Các cột còn lại (ví dụ: `Tên`, `Công ty`...) được dùng làm biến trộn dữ liệu `{{...}}`. Cột Trạng thái tự động đổi màu xanh khi gửi thành công và màu đỏ khi có lỗi.
 * **Dashboard:** Bảng điều khiển tiến trình gồm 5 thẻ chỉ số KPI (Tổng liên hệ, Đã gửi, Chờ gửi, Lỗi, Hạn mức ngày), thanh tiến độ trực quan Sparkline và bảng thông số vận hành.

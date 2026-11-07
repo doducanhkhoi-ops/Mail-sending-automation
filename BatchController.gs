@@ -44,9 +44,9 @@ function startSending() {
   
   var emailContent = getEmailContent(config);
   if (!emailContent) {
-    showAlert("Lỗi nội dung", "Không thể lấy nội dung email.\n\nVui lòng kiểm tra lại:\n- Chế độ 'draft_first': Đã có thư nháp trong Gmail chưa?\n- Chế độ 'draft_by_subject': Tiêu đề thư nháp đã khớp chưa?\n- Chế độ 'manual': Đã nhập nội dung HTML trong bảng Cấu hình chưa?");
-    logError("Không thể lấy nội dung email để gửi. Chế độ hiện tại: " + (config["Chế độ nội dung"] || "draft_first"));
-    setConfig("Trạng thái hệ thống", "Lỗi: Không tìm thấy nội dung email");
+    showAlert("Không tìm thấy thư nháp", "Không thể lấy nội dung thư nháp từ Gmail.\n\nVui lòng kiểm tra lại:\n- Bạn đã tạo thư nháp trong hòm thư Gmail của mình chưa?\n- Nếu có nhập ô 'Tiêu đề thư nháp Gmail' trong sheet Cấu hình, hãy kiểm tra tiêu đề đã khớp chưa.\n- Nếu để trống ô này, hệ thống sẽ tự động lấy thư nháp mới nhất trong Gmail.");
+    logError("Không thể lấy nội dung thư nháp Gmail để gửi.");
+    setConfig("Trạng thái hệ thống", "Lỗi: Không tìm thấy thư nháp");
     return;
   }
   

@@ -334,9 +334,10 @@ function updateDashboard() {
   h2.setValue("THIẾT LẬP CHIẾN DỊCH");
   h2.setFontSize(10).setFontWeight("bold").setFontColor("#ffffff").setBackground("#334155").setVerticalAlignment("middle");
   
+  var draftTitle = config["Tiêu đề thư nháp Gmail"] || config["Tiêu đề bản nháp"] || "(Thư nháp mới nhất)";
   var m2 = [
-    ["Chế độ lấy nội dung", config["Chế độ nội dung"] || "draft_first"],
-    ["Khoảng cách giãn cách", (config["Delay giữa email (giây)"] || "5") + "s / thư"],
+    ["Mẫu thư nháp Gmail", draftTitle],
+    ["Khoảng cách giãn cách", (config["Delay giữa email (giây)"] || "3") + "s / thư"],
     ["Kích thước mỗi đợt gửi", (config["Batch size"] || "50") + " email"],
     ["Thời gian nghỉ giữa đợt", (config["Cooldown giữa batch (phút)"] || "5") + " phút"]
   ];
@@ -419,36 +420,10 @@ function resetAllStatus() {
 }
 
 /**
- * Định dạng thẩm mỹ chuyên nghiệp cho bảng Cấu hình
+ * Định dạng thẩm mỹ chuyên nghiệp và đồng bộ chuẩn MECE cho bảng Cấu hình
  */
 function formatConfigSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = findSheet(ss, SHEET_CONFIG, SHEET_CONFIG_LEGACY);
-  if (!sheet) return;
-  
-  sheet.setColumnWidth(1, 260);
-  sheet.setColumnWidth(2, 360);
-  sheet.setColumnWidth(3, 520);
-  
-  sheet.getRange("A1:C1").setFontWeight("bold")
-    .setFontSize(11)
-    .setBackground("#0f172a")
-    .setFontColor("#ffffff")
-    .setVerticalAlignment("middle");
-  sheet.setRowHeight(1, 36);
-  sheet.setFrozenRows(1);
-  
-  var lastRow = sheet.getLastRow();
-  if (lastRow >= 2) {
-    for (var r = 2; r <= lastRow; r++) {
-      sheet.setRowHeight(r, 28);
-      var bg = (r % 2 === 0) ? "#ffffff" : "#f8fafc";
-      sheet.getRange(r, 1).setBackground(bg).setFontColor("#0f172a").setFontWeight("bold").setFontSize(10).setVerticalAlignment("middle");
-      sheet.getRange(r, 2).setBackground("#f1f5f9").setFontColor("#0f172a").setFontSize(10).setVerticalAlignment("middle");
-      sheet.getRange(r, 3).setBackground(bg).setFontColor("#64748b").setFontSize(9.5).setVerticalAlignment("middle");
-    }
-    sheet.getRange(2, 1, lastRow - 1, 3).setBorder(true, true, true, true, true, true, "#e2e8f0", SpreadsheetApp.BorderStyle.SOLID);
-  }
+  syncConfigSheet();
 }
 
 /**
