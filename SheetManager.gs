@@ -354,7 +354,7 @@ function updateDashboard() {
   h3.setFontSize(10).setFontWeight("bold").setFontColor("#ffffff").setBackground("#334155").setVerticalAlignment("middle").setHorizontalAlignment("center");
   
   dashSheet.getRange("E12").setFormula('="Lịch: " & IFERROR(VLOOKUP("Giờ gửi tự động", ' + configLookup + ', 2, FALSE), "Đã tắt")');
-  dashSheet.getRange("E13").setFormula('="Người gửi: " & IF(IFERROR(VLOOKUP("Người phụ trách gửi tự động", ' + configLookup + ', 2, FALSE), "Đã tắt")="Đã tắt", "Chưa có", IFERROR(REGEXEXTRACT(VLOOKUP("Người phụ trách gửi tự động", ' + configLookup + ', 2, FALSE), "^[^@]+"), "") & "@...")');
+  dashSheet.getRange("E13").setFormula('="Người gửi: " & IF(IFERROR(VLOOKUP("Email đang gửi hiện tại", ' + configLookup + ', 2, FALSE), "Đã tắt")="Đã tắt", "Chưa có", IFERROR(REGEXEXTRACT(VLOOKUP("Email đang gửi hiện tại", ' + configLookup + ', 2, FALSE), "^[^@]+"), "") & "@...")');
   dashSheet.getRange("E14").setFormula('="Đã gửi hôm nay: " & IFERROR(VLOOKUP("Quota đã dùng hôm nay", ' + configLookup + ', 2, FALSE), 0) & " thư"');
   dashSheet.getRange("E15").setFormula('="Hạn mức còn lại: " & MAX(0, 100 - IFERROR(VALUE(VLOOKUP("Quota đã dùng hôm nay", ' + configLookup + ', 2, FALSE)), 0))');
   

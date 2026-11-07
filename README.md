@@ -29,7 +29,7 @@ Sau khi mở bảng tính, thanh công cụ sẽ hiển thị menu **`Hệ thố
   * **Xóa toàn bộ trigger:** Hủy bỏ toàn bộ lịch hẹn giờ ngầm.
 * **Menu `Tiện ích`:**
   * **Cập nhật Dashboard:** Tự động thiết lập hệ thống công thức trực tiếp (Live Formulas) cho toàn bộ Dashboard.
-  * **Làm đẹp toàn bộ bảng tính:** 1-Click đồng bộ font chữ, màu sắc, viền ô, dọn dẹp bảng Cấu hình chuẩn MECE và cài đặt Dashboard thời gian thực cho cả 4 bảng tính.
+  * **Rút gọn cấu hình:** 1-Click dọn dẹp các mục dư thừa (như Tiêu đề email, Chế độ nội dung, CC, BCC), đưa bảng Cấu hình về tinh gọn với `Email đang gửi hiện tại` và đồng bộ giao diện toàn bộ bảng tính.
   * **Kiểm tra email trùng lặp:** Quét và cảnh báo các địa chỉ email xuất hiện nhiều lần (hệ thống mặc định vẫn gửi cho toàn bộ các dòng để bảo đảm đầy đủ dữ liệu từng người).
   * **Danh sách thư nháp Gmail:** Liệt kê chính xác danh sách tên các thư nháp hiện có trong Gmail của bạn.
   * **Đặt lại trạng thái gửi:** Xóa toàn bộ trạng thái `Đã gửi` / `Lỗi` để cho phép gửi lại từ đầu.
@@ -49,9 +49,9 @@ Hệ thống được quản lý mã nguồn tập trung qua Thư viện (Librar
 3. Dán mã Script ID ở trên vào ô tìm kiếm và nhấn **Tra cứu**.
 4. Cấu hình 2 thông số:
    * **Mã định danh (Identifier):** Đổi tên thành chính xác chữ **`EmailSystem`** (viết liền, đúng chữ hoa/thường).
-   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`21`**.
+   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`22`**.
    * Nhấn nút **Thêm (Add)**.
-   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **21** và bấm **Lưu**).*
+   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **22** và bấm **Lưu**).*
 5. Xóa toàn bộ nội dung cũ trong trình soạn thảo, sau đó dán đoạn mã cầu nối sau vào:
 
 ```javascript
@@ -67,7 +67,6 @@ function menuToggleFormSubmit() { EmailSystem.menuToggleFormSubmit(); }
 function menuListTriggers() { EmailSystem.menuListTriggers(); }
 function menuRemoveAllTriggers() { EmailSystem.menuRemoveAllTriggers(); }
 function menuUpdateDashboard() { EmailSystem.menuUpdateDashboard(); }
-function menuSyncConfig() { EmailSystem.menuSyncConfig(); }
 function menuFormatAllSheets() { EmailSystem.menuFormatAllSheets(); }
 function menuCheckDuplicates() { EmailSystem.menuCheckDuplicates(); }
 function menuListDrafts() { EmailSystem.menuListDrafts(); }
@@ -91,7 +90,7 @@ function onFormSubmitTrigger(e) { EmailSystem.onFormSubmitTrigger(e); }
   * `Batch size`: Số lượng email tối đa trong mỗi đợt gửi (khuyến nghị 50).
   * `Cooldown giữa batch (phút)`: Thời gian tạm nghỉ giữa các đợt gửi khi gửi hàng loạt.
   * `Khung giờ tự động bắt đầu` / `Khung giờ tự động kết thúc`: Khung giờ cho phép gửi (định dạng HH:mm, ĐỂ TRỐNG = Gửi mọi lúc 24/7).
-  * `Người phụ trách gửi tự động`: Email tài khoản hiện đang bật gửi tự động (Hệ thống tự cập nhật).
+  * `Email đang gửi hiện tại`: Email tài khoản hiện đang bật gửi tự động (Hệ thống tự cập nhật).
   * `Giờ gửi tự động`: Chế độ tự động hiện tại (Tức thì / Mỗi 15 phút / Đã tắt) (Hệ thống tự cập nhật).
   * `Email test`: Địa chỉ email nhận bản thử nghiệm và nhận thông báo khi hoàn tất.
 * **Danh sách:** Dữ liệu người nhận. Cột đầu tiên là `Email`, có một cột tiêu đề là `Trạng thái`. Các cột còn lại (ví dụ: `Tên`, `Công ty`...) được dùng làm biến trộn dữ liệu `{{...}}`. Cột Trạng thái tự động đổi màu xanh khi gửi thành công và màu đỏ khi có lỗi.

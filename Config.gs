@@ -20,10 +20,8 @@ var CONFIG_DEFAULTS = {
   "Cooldown giữa batch (phút)": "5",
   "Khung giờ tự động bắt đầu": "",
   "Khung giờ tự động kết thúc": "",
-  "Người phụ trách gửi tự động": "Đã tắt",
+  "Email đang gửi hiện tại": "Đã tắt",
   "Giờ gửi tự động":         "Đã tắt",
-  "CC":                      "",
-  "BCC":                     "",
   "Email test":              "",
   "Quota đã dùng hôm nay":   "0",
   "Ngày quota":              "",
@@ -146,6 +144,10 @@ function syncConfigSheet() {
                      currentValues["Tiêu đề bản nháp"] || 
                      (currentValues["Chế độ nội dung"] === "draft_by_subject" ? currentValues["Tiêu đề email"] : "") || 
                      CONFIG_DEFAULTS["Tiêu đề thư nháp Gmail"];
+                     
+  var unifiedSender = currentValues["Email đang gửi hiện tại"] ||
+                      currentValues["Người phụ trách gửi tự động"] ||
+                      CONFIG_DEFAULTS["Email đang gửi hiện tại"];
   
   var descriptions = {
     "Tiêu đề thư nháp Gmail":   "Tên thư nháp trong Gmail để làm mẫu (ĐỂ TRỐNG = Tự động lấy thư nháp mới nhất)",
@@ -154,10 +156,8 @@ function syncConfigSheet() {
     "Cooldown giữa batch (phút)": "Thời gian tạm nghỉ giữa các đợt gửi khi gửi hàng loạt",
     "Khung giờ tự động bắt đầu": "Giờ bắt đầu gửi tự động (định dạng HH:mm, ví dụ 08:00, ĐỂ TRỐNG = Gửi mọi lúc 24/7)",
     "Khung giờ tự động kết thúc": "Giờ kết thúc gửi tự động (định dạng HH:mm, ví dụ 21:30, ĐỂ TRỐNG = Gửi mọi lúc 24/7)",
-    "Người phụ trách gửi tự động": "Email tài khoản Google hiện đang chịu trách nhiệm gửi tự động (Hệ thống tự cập nhật)",
+    "Email đang gửi hiện tại": "Tài khoản Google đang gửi thư tự động (Hệ thống tự cập nhật)",
     "Giờ gửi tự động":         "Chế độ chạy tự động: Tức thì (Realtime) / Mỗi 15 phút / Đã tắt (Hệ thống tự cập nhật)",
-    "CC":                      "Danh sách địa chỉ nhận CC (phân cách bằng dấu phẩy)",
-    "BCC":                     "Danh sách địa chỉ nhận BCC (phân cách bằng dấu phẩy)",
     "Email test":              "Địa chỉ email nhận thư kiểm tra trước khi gửi hàng loạt",
     "Quota đã dùng hôm nay":   "Hệ thống tự động cập nhật, không sửa thủ công",
     "Ngày quota":              "Hệ thống tự động cập nhật, không sửa thủ công",
@@ -183,6 +183,9 @@ function syncConfigSheet() {
     var val = (currentValues[key] !== undefined && currentValues[key] !== "") ? currentValues[key] : CONFIG_DEFAULTS[key];
     if (key === "Tiêu đề thư nháp Gmail") {
       val = unifiedDraft;
+    }
+    if (key === "Email đang gửi hiện tại") {
+      val = unifiedSender;
     }
     
     sheet.getRange(row, 1).setValue(key);

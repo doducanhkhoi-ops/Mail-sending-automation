@@ -26,7 +26,7 @@ function onOpen() {
       )
       .addSubMenu(ui.createMenu("Tiện ích")
         .addItem("Cập nhật Dashboard", "menuUpdateDashboard")
-        .addItem("Làm đẹp toàn bộ bảng tính (Đồng bộ chuẩn MECE)", "menuFormatAllSheets")
+        .addItem("Rút gọn cấu hình", "menuFormatAllSheets")
         .addItem("Kiểm tra email trùng lặp", "menuCheckDuplicates")
         .addItem("Danh sách thư nháp Gmail", "menuListDrafts")
         .addItem("Đặt lại trạng thái gửi", "menuResetStatus")
@@ -109,7 +109,7 @@ function menuSyncConfig() {
 
 function menuFormatAllSheets() {
   formatAllSheets();
-  showToast("Đã định dạng và làm đẹp toàn bộ các bảng tính.", "Hoàn tất");
+  showToast("Đã rút gọn cấu hình và làm đẹp toàn bộ các bảng tính.", "Hoàn tất");
 }
 
 function menuCheckDuplicates() {

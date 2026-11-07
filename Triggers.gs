@@ -33,7 +33,7 @@ function setupIntervalTrigger() {
   var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
   var timeWindowText = (startTime || endTime) ? " (" + (startTime || "00:00") + " - " + (endTime || "23:59") + ")" : " (24/7)";
   
-  setConfig("Người phụ trách gửi tự động", activeUser);
+  setConfig("Email đang gửi hiện tại", activeUser);
   setConfig("Giờ gửi tự động", "Mỗi 15 phút" + timeWindowText);
   logInfo("Đã thiết lập trigger kiểm tra định kỳ 15 phút bởi: " + activeUser);
   
@@ -82,7 +82,7 @@ function setupFormSubmitTrigger() {
     .create();
   
   // Lưu thông tin người sở hữu trigger vào cấu hình
-  setConfig("Người phụ trách gửi tự động", activeUser);
+  setConfig("Email đang gửi hiện tại", activeUser);
   
   // Đồng bộ ô 'Giờ gửi tự động' hiển thị rõ chế độ và khung giờ cho phép
   var config = getConfig();
@@ -124,7 +124,7 @@ function removeFormSubmitTrigger() {
       removed++;
     }
   }
-  setConfig("Người phụ trách gửi tự động", "Đã tắt");
+  setConfig("Email đang gửi hiện tại", "Đã tắt");
   setConfig("Giờ gửi tự động", "Đã tắt");
   if (removed > 0) {
     logInfo("Đã xóa " + removed + " trigger tự động gửi tức thì.");
@@ -148,7 +148,7 @@ function toggleFormSubmitTrigger() {
   }
   
   var config = getConfig();
-  var currentOwner = config["Người phụ trách gửi tự động"] || "";
+  var currentOwner = config["Email đang gửi hiện tại"] || config["Người phụ trách gửi tự động"] || "";
   var activeUser = "";
   try {
     activeUser = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
