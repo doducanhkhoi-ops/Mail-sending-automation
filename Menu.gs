@@ -103,8 +103,8 @@ function menuUpdateDashboard() {
 }
 
 function menuSyncConfig() {
-  syncConfigSheet();
-  showToast("Đã đồng bộ và làm sạch bảng Cấu hình theo chuẩn tinh gọn MECE.", "Cấu hình MECE");
+  formatAllSheets();
+  showToast("Đã rút gọn cấu hình và làm đẹp toàn bộ các bảng tính.", "Hoàn tất");
 }
 
 function menuFormatAllSheets() {

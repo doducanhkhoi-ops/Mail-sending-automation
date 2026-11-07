@@ -342,7 +342,7 @@ function updateDashboard() {
   dashSheet.getRange("B13").setFormula('=IF((B5+D5)=0' + S + ' "0%"' + S + ' ROUND(D5/(B5+D5)*100' + S + ' 1) & "%")');
   
   dashSheet.getRange("A14").setValue("Thời gian gửi ước tính");
-  dashSheet.getRange("B14").setFormula('=IF(C5=0' + S + ' "0 phút"' + S + ' "~" & CEILING(C5 * IFERROR(VALUE(VLOOKUP("Delay giữa email (giây)"' + S + ' ' + configLookup + S + ' 2' + S + ' 0))' + S + ' 3) / 60) & " phút")');
+  dashSheet.getRange("B14").setFormula('=IF(C5=0' + S + ' "0 phút"' + S + ' "~" & ROUNDUP(C5 * IFERROR(VALUE(VLOOKUP("Delay giữa email (giây)"' + S + ' ' + configLookup + S + ' 2' + S + ' 0))' + S + ' 3) / 60' + S + ' 0) & " phút")');
   
   dashSheet.getRange("A15").setValue("Số lượng cần xử lý tiếp");
   dashSheet.getRange("B15").setFormula('=C5 & " liên hệ"');
@@ -385,7 +385,7 @@ function updateDashboard() {
   h3.setFontSize(10).setFontWeight("bold").setFontColor("#ffffff").setBackground("#334155").setVerticalAlignment("middle").setHorizontalAlignment("center");
   
   dashSheet.getRange("E12").setFormula('="Lịch: " & IFERROR(VLOOKUP("Giờ gửi tự động"' + S + ' ' + configLookup + S + ' 2' + S + ' 0)' + S + ' "Đã tắt")');
-  dashSheet.getRange("E13").setFormula('="Người gửi: " & IF(IFERROR(VLOOKUP("Email đang gửi hiện tại"' + S + ' ' + configLookup + S + ' 2' + S + ' 0)' + S + ' "Đã tắt")="Đã tắt"' + S + ' "Chưa có"' + S + ' IFERROR(REGEXEXTRACT(VLOOKUP("Email đang gửi hiện tại"' + S + ' ' + configLookup + S + ' 2' + S + ' 0)' + S + ' "^[^@]+"); "") & "@...")');
+  dashSheet.getRange("E13").setFormula('="Người gửi: " & IF(IFERROR(VLOOKUP("Email đang gửi hiện tại"' + S + ' ' + configLookup + S + ' 2' + S + ' 0)' + S + ' "Đã tắt")="Đã tắt"' + S + ' "Chưa có"' + S + ' IFERROR(REGEXEXTRACT(VLOOKUP("Email đang gửi hiện tại"' + S + ' ' + configLookup + S + ' 2' + S + ' 0)' + S + ' "^[^@]+")' + S + ' "") & "@...")');
   dashSheet.getRange("E14").setFormula('="Đã gửi hôm nay: " & IFERROR(VLOOKUP("Quota đã dùng hôm nay"' + S + ' ' + configLookup + S + ' 2' + S + ' 0)' + S + ' 0) & " thư"');
   dashSheet.getRange("E15").setFormula('="Hạn mức còn lại: " & MAX(0' + S + ' 100 - IFERROR(VALUE(VLOOKUP("Quota đã dùng hôm nay"' + S + ' ' + configLookup + S + ' 2' + S + ' 0))' + S + ' 0))');
   
@@ -561,8 +561,8 @@ function formatLogSheet() {
  * Định dạng thẩm mỹ đồng bộ cho toàn bộ các bảng trong hệ thống
  */
 function formatAllSheets() {
-  updateDashboard();
   formatConfigSheet();
+  updateDashboard();
   formatDataSheet();
   formatLogSheet();
 }

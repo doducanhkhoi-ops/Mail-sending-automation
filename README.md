@@ -49,9 +49,9 @@ Hệ thống được quản lý mã nguồn tập trung qua Thư viện (Librar
 3. Dán mã Script ID ở trên vào ô tìm kiếm và nhấn **Tra cứu**.
 4. Cấu hình 2 thông số:
    * **Mã định danh (Identifier):** Đổi tên thành chính xác chữ **`EmailSystem`** (viết liền, đúng chữ hoa/thường).
-   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`24`**.
+   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`25`**.
    * Nhấn nút **Thêm (Add)**.
-   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **24** và bấm **Lưu**).*
+   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **25** và bấm **Lưu**).*
 5. Xóa toàn bộ nội dung cũ trong trình soạn thảo, sau đó dán đoạn mã cầu nối sau vào:
 
 ```javascript
@@ -68,6 +68,7 @@ function menuListTriggers() { EmailSystem.menuListTriggers(); }
 function menuRemoveAllTriggers() { EmailSystem.menuRemoveAllTriggers(); }
 function menuUpdateDashboard() { EmailSystem.menuUpdateDashboard(); }
 function menuFormatAllSheets() { EmailSystem.menuFormatAllSheets(); }
+function menuSyncConfig() { EmailSystem.menuFormatAllSheets(); }
 function menuCheckDuplicates() { EmailSystem.menuCheckDuplicates(); }
 function menuListDrafts() { EmailSystem.menuListDrafts(); }
 function menuResetStatus() { EmailSystem.menuResetStatus(); }
@@ -75,6 +76,7 @@ function menuResetStatus() { EmailSystem.menuResetStatus(); }
 function onIntervalTrigger() { EmailSystem.onIntervalTrigger(); }
 function continueSending() { EmailSystem.continueSending(); }
 function onFormSubmitTrigger(e) { EmailSystem.onFormSubmitTrigger(e); }
+function onScheduledStartTrigger() { EmailSystem.onScheduledStartTrigger(); }
 ```
 
 6. Nhấn **Lưu dự án** (Ctrl + S), quay lại bảng tính và tải lại trang (F5).

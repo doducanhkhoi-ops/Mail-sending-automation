@@ -41,7 +41,8 @@ function setupIntervalTrigger() {
       logInfo("Bật lịch tự động: Tìm thấy " + newRecipients.length + " người nhận mới. Khởi động gửi ngay...");
       startSending();
     } else {
-      showToast("Đã bật tự động: Hiện ngoài khung giờ (" + (startTime || "00:00") + " - " + (endTime || "23:59") + "). Sẽ tự gửi khi đến giờ!", "Lịch tự động", 5);
+      _scheduleWakeupAtStartTime(startTime);
+      showToast("Đã bật tự động: Hiện ngoài khung giờ. Đã hẹn giờ đúng " + (startTime || "00:00") + " để tự động gửi ngay các mail chờ!", "Lịch tự động", 6);
     }
   } else {
     showToast("Đã bật tự động: Hiện chưa có email mới. Hệ thống sẽ tự động kiểm tra mỗi 15 phút.", "Lịch tự động", 5);
@@ -93,8 +94,9 @@ function setupFormSubmitTrigger() {
       logInfo("Kích hoạt tự động: Tìm thấy " + newRecipients.length + " email đang chờ trong pool. Khởi động gửi ngay...");
       startSending();
     } else {
-      showToast("Đã BẬT tự động gửi: Phát hiện " + newRecipients.length + " email chờ, nhưng hiện tại ngoài khung giờ (" + startTime + " - " + endTime + "). Sẽ tự gửi khi đến giờ!", "Tự động gửi", 7);
-      logInfo("Đã bật tự động nhưng ngoài khung giờ cho phép (" + startTime + " - " + endTime + "). Hàng chờ sẽ được gửi khi đến giờ.");
+      _scheduleWakeupAtStartTime(startTime);
+      showToast("Đã BẬT: Đang ngoài khung giờ. Đã hẹn giờ đúng " + (startTime || "00:00") + " để tự động gửi ngay " + newRecipients.length + " email chờ!", "Tự động gửi", 7);
+      logInfo("Đã bật tự động nhưng ngoài khung giờ cho phép (" + startTime + " - " + endTime + "). Đã hẹn giờ đúng " + startTime + " để gửi ngay hàng chờ.");
     }
   } else {
     showToast("Đã BẬT gửi tức thì: Cứ có dòng mới (Form, Nhập tay, IMPORTRANGE) là gửi ngay!", "Tự động gửi", 6);
@@ -114,6 +116,7 @@ function removeFormSubmitTrigger() {
       removed++;
     }
   }
+  _cleanupScheduledStartTriggers();
   setConfig("Email đang gửi hiện tại", "Đã tắt");
   setConfig("Giờ gửi tự động", "Đã tắt");
   if (removed > 0) {
@@ -185,7 +188,8 @@ function onFormSubmitTrigger(e) {
     var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
     var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
     if (!isWithinAllowedTimeWindow(startTime, endTime)) {
-      logInfo("Hiện tại ngoài khung giờ gửi tự động (" + startTime + " - " + endTime + "). Tạm hoãn gửi.");
+      logInfo("Hiện tại ngoài khung giờ gửi tự động (" + startTime + " - " + endTime + "). Tạm hoãn gửi và hẹn giờ mở khung.");
+      _scheduleWakeupAtStartTime(startTime);
       return;
     }
     
@@ -349,6 +353,7 @@ function removeAllTriggers() {
   }
   PropertiesService.getScriptProperties().deleteProperty(PROPS_KEY_PAUSED);
   setConfig("Trạng thái hệ thống", "Sẵn sàng");
+  _cleanupScheduledStartTriggers();
   setConfig("Email đang gửi hiện tại", "Đã tắt");
   setConfig("Giờ gửi tự động", "Đã tắt");
   showToast("Đã xóa toàn bộ " + triggers.length + " trigger.", "Lịch tự động");
@@ -378,4 +383,82 @@ function listTriggers() {
     }
   }
   showAlert("Danh sách Trigger", info);
+}
+
+/**
+ * Tự động hẹn giờ đánh thức chính xác vào phút bắt đầu của khung giờ
+ * Tránh việc phải đợi chu kỳ quét định kỳ 15 phút
+ */
+function _scheduleWakeupAtStartTime(startTimeStr) {
+  if (!startTimeStr) return;
+  
+  var parts = String(startTimeStr).trim().split(":");
+  if (parts.length < 2) return;
+  var targetHour = parseInt(parts[0], 10);
+  var targetMinute = parseInt(parts[1], 10);
+  if (isNaN(targetHour) || isNaN(targetMinute)) return;
+  
+  var now = new Date();
+  var targetDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), targetHour, targetMinute, 0);
+  
+  // Nếu giờ này hôm nay đã qua thì tính cho ngày hôm sau
+  if (targetDate <= now) {
+    targetDate.setDate(targetDate.getDate() + 1);
+  }
+  
+  // Kiểm tra xem đã có trigger hẹn giờ mở khung chưa
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "onScheduledStartTrigger") {
+      return; // Đã có trigger hẹn giờ, không tạo trùng
+    }
+  }
+  
+  try {
+    ScriptApp.newTrigger("onScheduledStartTrigger")
+      .timeBased()
+      .at(targetDate)
+      .create();
+    logInfo("Đã tự động hẹn giờ đúng " + startTimeStr + " (" + formatDateVN(targetDate) + ") để đánh thức gửi ngay các email chờ!");
+  } catch(e) {
+    logError("Không thể tạo trigger hẹn giờ mở khung: " + e.message);
+  }
+}
+
+/**
+ * Xóa các trigger hẹn giờ mở khung
+ */
+function _cleanupScheduledStartTriggers() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "onScheduledStartTrigger") {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+}
+
+/**
+ * Hàm kích hoạt khi đồng hồ điểm đúng giờ bắt đầu của khung giờ
+ */
+function onScheduledStartTrigger() {
+  _cleanupScheduledStartTriggers();
+  logInfo("Đồng hồ đã điểm đúng khung giờ gửi tự động. Bắt đầu quét hàng chờ...");
+  
+  var config = getConfig();
+  var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
+  var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
+  
+  if (!isWithinAllowedTimeWindow(startTime, endTime)) {
+    logInfo("Chưa đúng khung giờ hoặc khung giờ đã thay đổi, bỏ qua.");
+    return;
+  }
+  
+  var newRecipients = getNewRecipients();
+  if (newRecipients.length > 0) {
+    showToast("Đúng " + (startTime || "giờ bắt đầu") + ": Đang tự động gửi ngay " + newRecipients.length + " email chờ...", "Khung giờ bắt đầu", 6);
+    logInfo("Đến khung giờ bắt đầu: Tìm thấy " + newRecipients.length + " email chờ. Bắt đầu gửi ngay lập tức...");
+    startSending();
+  } else {
+    logInfo("Đến khung giờ bắt đầu nhưng chưa có email nào chờ trong danh sách.");
+  }
 }
