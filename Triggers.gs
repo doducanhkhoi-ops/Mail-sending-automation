@@ -229,17 +229,29 @@ function onFormSubmitTrigger(e) {
     
     if (newRecipients.length > 0) {
       logInfo("Tìm thấy " + newRecipients.length + " người nhận chưa gửi trong danh sách. Bắt đầu gửi lần lượt...");
+      showToast("Đang gửi mail cho " + newRecipients.length + " liên hệ mới...", "Tiến trình gửi", 4);
+      
       var delay = (parseInt(config["Delay giữa email (giây)"]) || 1) * 1000;
+      var sentCount = 0;
       for (var k = 0; k < newRecipients.length; k++) {
         if (!hasQuotaRemaining()) {
           logInfo("Đã hết hạn mức gửi trong ngày khi đang xử lý hàng chờ.");
+          showToast("Đã dừng gửi do hết hạn mức trong ngày.", "Thông báo", 5);
           break;
         }
-        sendSingleEmail(newRecipients[k], emailContent, config, "AUTO_TRIGGER");
+        var currentEmail = newRecipients[k].email;
+        showToast("Đang gửi (" + (k + 1) + "/" + newRecipients.length + "): " + currentEmail, "Đang gửi", 3);
+        
+        var success = sendSingleEmail(newRecipients[k], emailContent, config, "AUTO_TRIGGER");
+        if (success) {
+          sentCount++;
+        }
+        
         if (k < newRecipients.length - 1) {
           Utilities.sleep(delay);
         }
       }
+      showToast("Đã gửi xong " + sentCount + "/" + newRecipients.length + " email mới.", "Hoàn tất", 4);
       // Cập nhật số liệu Dashboard sau khi hoàn tất lượt gửi
       updateDashboard();
     } else {
