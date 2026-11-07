@@ -160,17 +160,14 @@ function toggleFormSubmitTrigger() {
 function onFormSubmitTrigger(e) {
   logInfo("Phát hiện dữ liệu Form / Bảng tính mới vào lúc " + formatDateVN(new Date()) + ". Bắt đầu xử lý...");
   
-  // Khóa độc quyền nhanh 2 giây (giảm từ 30s) để tránh chờ đợi vô ích
+  // Dùng LockService với thời gian chờ 15s để nếu có luồng trước vừa kết thúc thì luồng sau vào gửi ngay lập tức
   var lock = LockService.getScriptLock();
   try {
-    var hasLock = lock.tryLock(2000);
+    var hasLock = lock.tryLock(15000);
     if (!hasLock) {
       logInfo("Hệ thống đang bận gửi một lượt khác, tự rút lui an toàn.");
       return;
     }
-    
-    // Đợi 1.5 giây để dữ liệu từ IMPORTRANGE hoặc Form kịp tính toán và hiển thị đầy đủ trên Sheet
-    Utilities.sleep(1500);
     
     var config = getConfig();
     
@@ -198,11 +195,18 @@ function onFormSubmitTrigger(e) {
       return;
     }
     
-    // Quét toàn bộ pool người nhận chưa gửi trong danh sách
+    // Quét ngay lập tức toàn bộ người nhận mới
     var newRecipients = getNewRecipients();
+    
+    // Nếu chưa thấy dòng mới ngay, thử kiểm tra lại 1 lần sau 500ms
+    if (newRecipients.length === 0) {
+      Utilities.sleep(500);
+      newRecipients = getNewRecipients();
+    }
+    
     if (newRecipients.length > 0) {
       logInfo("Tìm thấy " + newRecipients.length + " người nhận chưa gửi trong danh sách. Bắt đầu gửi lần lượt...");
-      var delay = (parseInt(config["Delay giữa email (giây)"]) || 2) * 1000;
+      var delay = (parseInt(config["Delay giữa email (giây)"]) || 1) * 1000;
       for (var k = 0; k < newRecipients.length; k++) {
         if (!hasQuotaRemaining()) {
           logInfo("Đã hết hạn mức gửi trong ngày khi đang xử lý hàng chờ.");
@@ -213,6 +217,7 @@ function onFormSubmitTrigger(e) {
           Utilities.sleep(delay);
         }
       }
+      // Cập nhật số liệu Dashboard sau khi hoàn tất lượt gửi
       updateDashboard();
     } else {
       logInfo("Không có người nhận mới nào cần gửi.");

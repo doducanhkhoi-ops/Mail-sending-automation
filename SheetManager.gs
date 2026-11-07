@@ -284,8 +284,9 @@ function updateDashboard() {
   progressBar.merge();
   if (total > 0) {
     var maxVal = Math.max(1, total);
-    var sparklineFormula = '=SPARKLINE({' + done + ', ' + pending + ', ' + errors + '}, {"charttype", "bar"; "color1", "#16a34a"; "color2", "#cbd5e1"; "color3", "#dc2626"; "max", ' + maxVal + '})';
-    progressBar.setFormula(sparklineFormula);
+    // Dùng setFormulaR1C1 hoặc tham chiếu trực tiếp ô KPI B5 (Đã gửi), C5 (Chờ), D5 (Lỗi) để không bị lỗi định dạng vùng ngôn ngữ (Locale)
+    var sparkFormula = '=SPARKLINE(B5:D5, {"charttype", "bar"; "color1", "#16a34a"; "color2", "#cbd5e1"; "color3", "#dc2626"; "max", ' + maxVal + '})';
+    progressBar.setFormula(sparkFormula);
   } else {
     progressBar.setValue("");
   }
