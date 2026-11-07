@@ -30,9 +30,10 @@ function sendSingleEmail(recipient, emailContent, config, batchNum) {
       htmlBody: personalBody
     };
     
-    var senderName = config["Tên người gửi (Sender Name)"] || config["Tên người gửi"] || config["Sender Name"];
-    if (senderName && String(senderName).trim()) {
-      options.name = String(senderName).trim();
+    var rawSenderName = config["Tên người gửi (Sender Name)"] || config["Tên người gửi"] || config["Sender Name"] || "";
+    var senderName = String(rawSenderName).trim();
+    if (senderName) {
+      options.name = replaceTemplateVars(senderName, recipient.data);
     }
     
     if (config["CC"]) options.cc = config["CC"];
@@ -122,9 +123,10 @@ function sendTestEmail() {
     body = testBanner + body;
     
     var options = { htmlBody: body };
-    var senderName = config["Tên người gửi (Sender Name)"] || config["Tên người gửi"] || config["Sender Name"];
-    if (senderName && String(senderName).trim()) {
-      options.name = String(senderName).trim();
+    var rawSenderName = config["Tên người gửi (Sender Name)"] || config["Tên người gửi"] || config["Sender Name"] || "";
+    var senderName = String(rawSenderName).trim();
+    if (senderName) {
+      options.name = replaceTemplateVars(senderName, recipient.data);
     }
     
     if (emailContent.attachments && emailContent.attachments.length > 0) {

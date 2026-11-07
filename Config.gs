@@ -45,6 +45,9 @@ function findSheet(ss, primaryName, legacyName) {
  */
 function getConfig() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (ss) {
+    try { SpreadsheetApp.flush(); } catch(e) {}
+  }
   var sheet = findSheet(ss, SHEET_CONFIG, SHEET_CONFIG_LEGACY);
   
   if (!sheet) {
