@@ -71,6 +71,12 @@ function setupFormSubmitTrigger() {
     .forSpreadsheet(ss)
     .onChange()
     .create();
+    
+  // 3. Lưới an toàn định kỳ mỗi 5 phút (đảm bảo quét sạch hàng chờ khi đến giờ mở khung)
+  ScriptApp.newTrigger("onIntervalTrigger")
+    .timeBased()
+    .everyMinutes(5)
+    .create();
   
   // Lưu thông tin người sở hữu trigger vào cấu hình
   setConfig("Email đang gửi hiện tại", activeUser);
@@ -111,7 +117,7 @@ function removeFormSubmitTrigger() {
   var removed = 0;
   for (var i = 0; i < triggers.length; i++) {
     var func = triggers[i].getHandlerFunction();
-    if (func === "onFormSubmitTrigger" || func === "onChangeTrigger") {
+    if (func === "onFormSubmitTrigger" || func === "onChangeTrigger" || func === "onIntervalTrigger") {
       ScriptApp.deleteTrigger(triggers[i]);
       removed++;
     }
@@ -276,7 +282,7 @@ function removeDailyTrigger() {
 }
 
 /**
- * Hàm thực thi khi trigger định kỳ 15 phút kích hoạt
+ * Hàm thực thi khi trigger định kỳ 15 phút hoặc nhịp tim 5 phút kích hoạt
  */
 function onIntervalTrigger() {
   logInfo("Kích hoạt kiểm tra định kỳ vào lúc " + formatDateVN(new Date()));
@@ -284,11 +290,35 @@ function onIntervalTrigger() {
   try {
     var config = getConfig();
     
-    // KIỂM TRA RÀNG BUỘC KHUNG GIỜ CHO CẢ TRIGGER 15 PHÚT
+    // KIỂM TRA RÀNG BUỘC KHUNG GIỜ
     var startTime = normalizeTimeString(config["Khung giờ tự động bắt đầu"]);
     var endTime = normalizeTimeString(config["Khung giờ tự động kết thúc"]);
+    
+    // Xử lý bù độ lệch sớm (Jitter Protection) của Google Cloud:
+    // Nếu Google Apps Script kích hoạt sớm 1-2 phút trước giờ mở khung:
+    if (startTime) {
+      var parts = startTime.split(":");
+      if (parts.length >= 2) {
+        var targetH = parseInt(parts[0], 10);
+        var targetM = parseInt(parts[1], 10);
+        var ss = SpreadsheetApp.getActiveSpreadsheet();
+        var tz = (ss && ss.getSpreadsheetTimeZone()) ? ss.getSpreadsheetTimeZone() : "Asia/Ho_Chi_Minh";
+        var now = new Date();
+        var dateStr = Utilities.formatDate(now, tz, "yyyy/MM/dd");
+        var timeStr = (targetH < 10 ? "0" : "") + targetH + ":" + (targetM < 10 ? "0" : "") + targetM + ":00";
+        var targetToday = Utilities.parseDate(dateStr + " " + timeStr, tz, "yyyy/MM/dd HH:mm:ss");
+        var diffMs = targetToday ? (targetToday.getTime() - now.getTime()) : 0;
+        
+        // Nếu kích hoạt sớm dưới 2 phút: Tạm nghỉ chính xác số mili-giây còn lại để chạm đúng 11:00:01
+        if (diffMs > 0 && diffMs <= 120000) {
+          logInfo("Trigger thức dậy sớm " + Math.round(diffMs / 1000) + "s so với giờ bắt đầu. Chờ đến đúng " + startTime + "...");
+          Utilities.sleep(diffMs + 1000);
+        }
+      }
+    }
+    
     if (!isWithinAllowedTimeWindow(startTime, endTime)) {
-      logInfo("Trigger 15 phút: Hiện tại ngoài khung giờ (" + startTime + " - " + endTime + "). Tạm hoãn gửi và tự động hẹn giờ mở khung.");
+      logInfo("Trigger: Hiện tại ngoài khung giờ (" + startTime + " - " + endTime + "). Tạm hoãn gửi và tự động hẹn giờ mở khung.");
       _scheduleWakeupAtStartTime(startTime);
       return;
     }
@@ -315,7 +345,7 @@ function onIntervalTrigger() {
     startSending();
     
   } catch (e) {
-    logError("Lỗi trong quá trình thực thi trigger 15 phút: " + e.message);
+    logError("Lỗi trong quá trình thực thi trigger định kỳ / hàng chờ: " + e.message);
   }
 }
 
@@ -416,12 +446,13 @@ function _scheduleWakeupAtStartTime(startTimeStr) {
   
   var props = PropertiesService.getScriptProperties();
   var savedSchedule = props.getProperty("SCHEDULED_START_TIME");
+  var savedId = props.getProperty("SCHEDULED_TRIGGER_ID");
   
   // Kiểm tra xem đã có trigger hẹn giờ mở khung và giờ có bị thay đổi không
   var triggers = ScriptApp.getProjectTriggers();
   var hasTrigger = false;
   for (var i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === "onScheduledStartTrigger") {
+    if (savedId && triggers[i].getUniqueId() === savedId) {
       hasTrigger = true;
       break;
     }
@@ -436,11 +467,13 @@ function _scheduleWakeupAtStartTime(startTimeStr) {
   _cleanupScheduledStartTriggers();
   
   try {
-    ScriptApp.newTrigger("onScheduledStartTrigger")
+    // Ưu tiên dùng hàm onIntervalTrigger (hàm luôn có sẵn 100% trong file của mọi người dùng)
+    var newTrigger = ScriptApp.newTrigger("onIntervalTrigger")
       .timeBased()
       .at(targetDate)
       .create();
     props.setProperty("SCHEDULED_START_TIME", startTimeStr);
+    props.setProperty("SCHEDULED_TRIGGER_ID", newTrigger.getUniqueId());
     logInfo("Đã tự động hẹn giờ đúng " + startTimeStr + " (" + formatDateVN(targetDate) + ") để đánh thức gửi ngay các email chờ!");
   } catch(e) {
     logError("Không thể tạo trigger hẹn giờ mở khung: " + e.message);
@@ -451,13 +484,17 @@ function _scheduleWakeupAtStartTime(startTimeStr) {
  * Xóa các trigger hẹn giờ mở khung
  */
 function _cleanupScheduledStartTriggers() {
+  var props = PropertiesService.getScriptProperties();
+  var savedId = props.getProperty("SCHEDULED_TRIGGER_ID");
   var triggers = ScriptApp.getProjectTriggers();
   for (var i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === "onScheduledStartTrigger") {
+    var fn = triggers[i].getHandlerFunction();
+    if (fn === "onScheduledStartTrigger" || (savedId && triggers[i].getUniqueId() === savedId)) {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
-  PropertiesService.getScriptProperties().deleteProperty("SCHEDULED_START_TIME");
+  props.deleteProperty("SCHEDULED_START_TIME");
+  props.deleteProperty("SCHEDULED_TRIGGER_ID");
 }
 
 /**
