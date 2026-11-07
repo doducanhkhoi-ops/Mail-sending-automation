@@ -14,6 +14,7 @@ function onOpen() {
       .addSeparator()
       .addItem("Bắt đầu gửi email", "menuStartSending")
       .addItem("Gửi thư thử nghiệm (Test)", "menuSendTest")
+      .addItem("📊 Kiểm tra Hạn mức Quota & Chênh lệch", "menuCheckQuota")
       .addSeparator()
       .addItem("Tạm dừng", "menuPause")
       .addItem("Tiếp tục gửi", "menuResume")
@@ -25,6 +26,7 @@ function onOpen() {
         .addItem("Xóa toàn bộ trigger", "menuRemoveAllTriggers")
       )
       .addSubMenu(ui.createMenu("Tiện ích")
+        .addItem("Kiểm tra Hạn mức Quota & Chênh lệch", "menuCheckQuota")
         .addItem("Cập nhật Dashboard", "menuUpdateDashboard")
         .addItem("Rút gọn cấu hình", "menuFormatAllSheets")
         .addItem("Kiểm tra email trùng lặp", "menuCheckDuplicates")
@@ -97,9 +99,30 @@ function menuRemoveAllTriggers() {
   }
 }
 
-function menuUpdateDashboard() {
+function menuCheckQuota() {
+  var details = refreshAndGetQuotaDetails();
   updateDashboard();
-  showToast("Đã cập nhật số liệu Dashboard.", "Dashboard");
+  
+  var msg = "👤 TÀI KHOẢN ĐANG GỬI:\n" +
+            "   " + details.userEmail + "\n" +
+            "   (" + details.accountType + ")\n\n" +
+            "📈 SỐ LIỆU TIÊU THỤ HÔM NAY:\n" +
+            "• Hạn mức tối đa Google cấp: " + details.maxQuota + " thư / ngày\n" +
+            "• Hạn mức thực tế còn lại: " + details.remainingQuota + " thư\n" +
+            "• Đã gửi thành công qua Sheet: " + details.sentViaSheet + " thư\n" +
+            "• Chênh lệch đã gửi ngoài Sheet: " + details.usedOutside + " thư\n" +
+            "  (Gửi từ Gmail web, điện thoại hoặc công cụ khác)\n\n" +
+            "🛡️ TÌNH TRẠNG HỆ THỐNG:\n" +
+            "   " + details.statusText + "\n\n" +
+            "(Đã tự động cập nhật số liệu lên Dashboard và Cấu hình)";
+            
+  showAlert("Chi tiết Hạn mức Quota & Chênh lệch", msg);
+}
+
+function menuUpdateDashboard() {
+  var details = refreshAndGetQuotaDetails();
+  updateDashboard();
+  showToast("Đã cập nhật Dashboard. Hạn mức: " + details.remainingQuota + "/" + details.maxQuota + " (Sheet: " + details.sentViaSheet + ", Ngoài: " + details.usedOutside + ")", "Cập nhật Dashboard", 5);
 }
 
 function menuSyncConfig() {
