@@ -22,12 +22,7 @@ function setupIntervalTrigger() {
     .everyMinutes(15)
     .create();
   
-  var activeUser = "";
-  try {
-    activeUser = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
-  } catch (e) {
-    activeUser = "Không xác định";
-  }
+  var activeUser = getCurrentUserEmail();
   
   var startTime = config["Khung giờ tự động bắt đầu"] ? String(config["Khung giờ tự động bắt đầu"]).trim() : "";
   var endTime = config["Khung giờ tự động kết thúc"] ? String(config["Khung giờ tự động kết thúc"]).trim() : "";
@@ -60,12 +55,7 @@ function setupIntervalTrigger() {
 function setupFormSubmitTrigger() {
   removeFormSubmitTrigger();
   
-  var activeUser = "";
-  try {
-    activeUser = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
-  } catch (e) {
-    activeUser = "Không xác định";
-  }
+  var activeUser = getCurrentUserEmail();
   
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
@@ -149,10 +139,7 @@ function toggleFormSubmitTrigger() {
   
   var config = getConfig();
   var currentOwner = config["Email đang gửi hiện tại"] || config["Người phụ trách gửi tự động"] || "";
-  var activeUser = "";
-  try {
-    activeUser = Session.getActiveUser().getEmail() || Session.getEffectiveUser().getEmail();
-  } catch (e) {}
+  var activeUser = getCurrentUserEmail();
 
   if (hasTrigger) {
     removeFormSubmitTrigger();
@@ -344,6 +331,7 @@ function toggleDailyTrigger() {
   
   if (hasTrigger) {
     removeDailyTrigger();
+    setConfig("Email đang gửi hiện tại", "Đã tắt");
     setConfig("Giờ gửi tự động", "Đã tắt");
     showToast("Đã tắt tính năng tự động kiểm tra định kỳ.", "Lịch tự động");
   } else {
@@ -361,21 +349,33 @@ function removeAllTriggers() {
   }
   PropertiesService.getScriptProperties().deleteProperty(PROPS_KEY_PAUSED);
   setConfig("Trạng thái hệ thống", "Sẵn sàng");
+  setConfig("Email đang gửi hiện tại", "Đã tắt");
   setConfig("Giờ gửi tự động", "Đã tắt");
   showToast("Đã xóa toàn bộ " + triggers.length + " trigger.", "Lịch tự động");
 }
 
 /**
- * Liệt kê danh sách các trigger hiện có
+ * Liệt kê danh sách các trigger hiện có kèm thông tin tài khoản sở hữu
  */
 function listTriggers() {
   var triggers = ScriptApp.getProjectTriggers();
-  var info = "Hiện có " + triggers.length + " trigger đang hoạt động:\n\n";
-  for (var i = 0; i < triggers.length; i++) {
-    info += (i + 1) + ". " + triggers[i].getHandlerFunction() + " (" + triggers[i].getEventType() + ")\n";
-  }
-  if (triggers.length === 0) {
-    info = "Không có trigger nào đang hoạt động.";
+  var myEmail = getCurrentUserEmail();
+  var config = getConfig();
+  var currentSender = config["Email đang gửi hiện tại"] || config["Người phụ trách gửi tự động"] || "Đã tắt";
+  
+  var info = "Tài khoản của bạn: " + myEmail + "\n";
+  info += "Email ghi nhận gửi tự động: " + currentSender + "\n\n";
+  
+  if (triggers.length > 0) {
+    info += "Tài khoản của bạn ĐANG CÓ " + triggers.length + " trigger hoạt động:\n";
+    for (var i = 0; i < triggers.length; i++) {
+      info += "- " + triggers[i].getHandlerFunction() + " (" + triggers[i].getEventType() + ")\n";
+    }
+  } else {
+    info += "Tài khoản của bạn HIỆN KHÔNG CÓ trigger nào bật trực tiếp.\n";
+    if (currentSender && currentSender !== "Đã tắt") {
+      info += "(Lưu ý: Hệ thống đang chạy gửi tự động dưới tài khoản: " + currentSender + ")";
+    }
   }
   showAlert("Danh sách Trigger", info);
 }

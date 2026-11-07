@@ -78,6 +78,24 @@ function isWithinAllowedTimeWindow(startTimeStr, endTimeStr) {
 }
 
 /**
+ * Lấy địa chỉ email của người dùng hiện tại một cách tin cậy
+ * Hỗ trợ cả Session.getActiveUser() và Session.getEffectiveUser()
+ * @returns {String} Email người dùng hoặc "Tài khoản hiện tại"
+ */
+function getCurrentUserEmail() {
+  var email = "";
+  try {
+    email = Session.getActiveUser().getEmail();
+  } catch(e) {}
+  if (!email) {
+    try {
+      email = Session.getEffectiveUser().getEmail();
+    } catch(e) {}
+  }
+  return email ? String(email).trim() : "Tài khoản hiện tại";
+}
+
+/**
  * Hiển thị thông báo nhanh (Toast) ở góc dưới bên phải Google Sheet
  * An toàn tuyệt đối khi chạy ngầm trong trigger
  */
