@@ -12,6 +12,8 @@ Giải pháp gửi email cá nhân hóa hàng loạt chạy trực tiếp trên 
 * **Xử lý theo đợt (Batch Processing):** Tự động chia danh sách gửi thành từng đợt (mặc định 50 mail/đợt), tạm nghỉ (cooldown) giữa các đợt và tự động nối tiếp để vượt qua giới hạn 6 phút/lần thực thi của Google Apps Script.
 * **Giãn cách an toàn:** Thiết lập thời gian chờ giữa mỗi lần gửi (mặc định 5 giây) nhằm giảm thiểu nguy cơ rơi vào bộ lọc spam của các máy chủ nhận mail.
 * **Email báo cáo hoàn tất:** Tự động gửi một email tổng kết số lượng thành công/lỗi về địa chỉ cấu hình trong ô `Email test` ngay khi hoàn thành toàn bộ danh sách.
+* **Bảo vệ tài khoản gửi & Chống xung đột (Sender Ownership Guard):** Nhận diện chính xác tài khoản Google đang phụ trách gửi. Khi có tài khoản khác cố gắng thao tác gửi hoặc bật trigger, hệ thống sẽ cảnh báo rõ tài khoản nào đang gửi và yêu cầu tài khoản đó tắt trước, hoặc cho phép tiếp quản an toàn. Toàn bộ trigger cũ của tài khoản trước sẽ tự động bị vô hiệu hóa, loại bỏ hoàn toàn nguy cơ gửi nhầm từ hộp thư không mong muốn.
+* **Đo hạn mức thông minh (Live Quota & Single Source of Truth):** Gọi trực tiếp API máy chủ Google để xác định đúng loại tài khoản (Gmail cá nhân 100 mail/ngày, Google Workspace Giáo dục 100 mail/ngày, hoặc Workspace Doanh nghiệp 1500 mail/ngày). Số lượng email đã gửi hôm nay được đếm trực tiếp từ bảng `Danh sách` thực tế theo ngày, đảm bảo số liệu chính xác tuyệt đối và không bị mất khi làm mới bảng.
 
 ---
 
@@ -21,6 +23,7 @@ Sau khi mở bảng tính, thanh công cụ sẽ hiển thị menu **`Hệ thố
 
 * **Bắt đầu gửi email:** Gửi trực tiếp toàn bộ người nhận mới có trong bảng `Danh sách`.
 * **Gửi thư thử nghiệm (Test):** Gửi một bản xem trước hoàn chỉnh (đã trộn dữ liệu mẫu) tới địa chỉ `Email test` để bạn kiểm tra giao diện, hình ảnh và tệp đính kèm trước khi gửi hàng loạt.
+* **Kiểm tra Hạn mức Quota & Chênh lệch:** Xem chi tiết tài khoản Google đang gửi, loại tài khoản (Gmail cá nhân / Giáo dục / Doanh nghiệp), hạn mức tối đa, số lượng đã gửi trong ngày và số lượt gửi an toàn còn lại từ Google.
 * **Tạm dừng / Tiếp tục gửi:** Dừng tạm thời hoặc tiếp tục tiến trình gửi đợt bất kỳ lúc nào.
 * **Menu `Lịch tự động`:**
   * **Bật / Tắt gửi tức thì khi có Form Submit:** Tự động gửi email ngay khi có người gửi Google Form hoặc nhập thêm dòng mới vào bảng tính. Hệ thống gửi ngay cho liên hệ mới, đồng thời xử lý các mail chưa gửi còn tồn đọng trong danh sách.
@@ -96,7 +99,12 @@ function onScheduledStartTrigger() { EmailSystem.onScheduledStartTrigger(); }
   * `Khung giờ tự động bắt đầu` / `Khung giờ tự động kết thúc`: Khung giờ cho phép gửi (định dạng HH:mm, ĐỂ TRỐNG = Gửi mọi lúc 24/7).
   * `Email đang gửi hiện tại`: Email tài khoản hiện đang bật gửi tự động (Hệ thống tự cập nhật).
   * `Giờ gửi tự động`: Chế độ tự động hiện tại (Tức thì / Mỗi 15 phút / Đã tắt) (Hệ thống tự cập nhật).
+  * `Hạn mức tối đa (Max Quota)`: Hạn mức gửi thư trong ngày do Google cấp (100 đối với Gmail cá nhân/Edu, 1500 đối với Workspace).
+  * `Hạn mức Google còn lại`: Số lượt gửi máy chủ Google còn cấp cho tài khoản này hôm nay (Hệ thống đo sống trực tiếp).
+  * `Đã gửi ngoài Sheet (Chênh lệch)`: Số email đã gửi ngoài Sheet hôm nay (qua web Gmail, điện thoại hoặc script khác).
+  * `Tình trạng hạn mức`: Đánh giá mức độ an toàn (🟢 An toàn / 🟡 Cảnh báo / 🔴 Đã cạn).
+  * `Quota đã dùng hôm nay`: Số email đã gửi thành công qua Sheet hôm nay (Đếm từ cột Trạng thái bảng Danh sách).
   * `Email test`: Địa chỉ email nhận bản thử nghiệm và nhận thông báo khi hoàn tất.
 * **Danh sách:** Dữ liệu người nhận. Cột đầu tiên là `Email`, có một cột tiêu đề là `Trạng thái`. Các cột còn lại (ví dụ: `Tên`, `Công ty`...) được dùng làm biến trộn dữ liệu `{{...}}`. Cột Trạng thái tự động đổi màu xanh khi gửi thành công và màu đỏ khi có lỗi.
 * **Dashboard:** Bảng điều khiển tiến trình gồm 5 thẻ chỉ số KPI (Tổng liên hệ, Đã gửi, Chờ gửi, Lỗi, Hạn mức ngày), thanh tiến độ trực quan Sparkline và bảng thông số vận hành.
-* **Lịch sử:** Nhật ký chi tiết của từng lượt gửi kèm thời gian chính xác, tài khoản gửi, email người nhận, tiêu đề, trạng thái, mã đợt và chi tiết lỗi nếu có.
+* **Lịch sử:** Nhật ký chi tiết của từng lượt gửi gồm 7 cột chuẩn: `Thời gian` (A), `Tài khoản gửi` (B), `Email người nhận` (C), `Tiêu đề` (D), `Trạng thái` (E), `Chi tiết lỗi` (F) và `Đợt #` (G). Hệ thống tự động nhận diện tài khoản gửi thực tế của từng email và tự động tô màu trực quan.
