@@ -36,6 +36,11 @@ function startSending() {
   
   PropertiesService.getScriptProperties().deleteProperty(PROPS_KEY_PAUSED);
   
+  // Xác thực quyền gửi và kiểm tra xung đột tài khoản khi thao tác thủ công
+  if (!validateSenderOwnership("Gửi email hàng loạt")) {
+    return;
+  }
+  
   if (!hasQuotaRemaining()) {
     showAlert("Hết hạn mức gửi", "Bạn đã sử dụng hết hạn mức gửi email trong ngày (tối đa 100 email/ngày đối với tài khoản Gmail cá nhân).\nVui lòng thử lại vào ngày mai.");
     logError("Đã hết hạn mức gửi email trong ngày.");

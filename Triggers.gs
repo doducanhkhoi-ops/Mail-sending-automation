@@ -155,17 +155,8 @@ function toggleFormSubmitTrigger() {
     showToast("Đã TẮT chế độ tự động gửi email khi có Form Submit.", "Form Submit");
   } else {
     // Nếu trong Cấu hình ghi nhận người khác đang bật mà bản thân tài khoản này chưa có trigger
-    if (currentOwner && currentOwner !== "Đã tắt" && activeUser && currentOwner !== activeUser) {
-      var confirmTakeover = showConfirm(
-        "Chuyển giao quyền gửi tự động",
-        "Hệ thống hiện đang gửi tự động bằng email: " + currentOwner + ".\n\n" +
-        "Bạn có muốn chuyển giao sang gửi bằng email của bạn (" + activeUser + ") không?\n\n" +
-        "(Bấm YES để Chuyển giao ngay, bấm NO để Hủy bỏ giữ nguyên tài khoản cũ)."
-      );
-      if (!confirmTakeover) {
-        showToast("Đã hủy chuyển giao. Hệ thống tiếp tục gửi bằng email: " + currentOwner, "Thông báo");
-        return;
-      }
+    if (!validateSenderOwnership("Bật gửi tự động khi có Form Submit")) {
+      return;
     }
     setupFormSubmitTrigger();
   }
@@ -189,6 +180,26 @@ function onFormSubmitTrigger(e) {
     }
     
     var config = getConfig();
+    
+    // CHỐT CHẶN DANH TÍNH NGƯỜI GỬI (IDENTITY GUARD & AUTO-CLEANUP)
+    var designatedSender = String(config["Email đang gửi hiện tại"] || config["Người phụ trách gửi tự động"] || "").trim();
+    var effectiveUser = "";
+    try {
+      effectiveUser = Session.getEffectiveUser().getEmail();
+    } catch(e) {}
+    if (!effectiveUser) effectiveUser = getCurrentUserEmail();
+    effectiveUser = String(effectiveUser).trim();
+
+    if (!designatedSender || designatedSender === "Đã tắt") {
+      logInfo("onFormSubmitTrigger: Chế độ tự động đang ĐÃ TẮT trong bảng Cấu hình. Bỏ qua.");
+      return;
+    }
+
+    if (designatedSender && effectiveUser && designatedSender.toLowerCase() !== effectiveUser.toLowerCase()) {
+      logInfo("onFormSubmitTrigger: Trigger kích hoạt bởi tài khoản cũ (" + effectiveUser + "), nhưng quyền gửi hiện tại thuộc về: " + designatedSender + ". Tự động bỏ qua và tự hủy trigger thừa của tài khoản này.");
+      _removeAllMyTriggersSilently();
+      return;
+    }
     
     // KIỂM TRA RÀNG BUỘC KHUNG GIỜ GỬI TỰ ĐỘNG
     var startTime = normalizeTimeString(config["Khung giờ tự động bắt đầu"]);
@@ -290,6 +301,26 @@ function onIntervalTrigger() {
   try {
     var config = getConfig();
     
+    // CHỐT CHẶN DANH TÍNH NGƯỜI GỬI (IDENTITY GUARD & AUTO-CLEANUP)
+    var designatedSender = String(config["Email đang gửi hiện tại"] || config["Người phụ trách gửi tự động"] || "").trim();
+    var effectiveUser = "";
+    try {
+      effectiveUser = Session.getEffectiveUser().getEmail();
+    } catch(e) {}
+    if (!effectiveUser) effectiveUser = getCurrentUserEmail();
+    effectiveUser = String(effectiveUser).trim();
+
+    if (!designatedSender || designatedSender === "Đã tắt") {
+      logInfo("onIntervalTrigger: Chế độ tự động đang ĐÃ TẮT trong bảng Cấu hình. Bỏ qua.");
+      return;
+    }
+
+    if (designatedSender && effectiveUser && designatedSender.toLowerCase() !== effectiveUser.toLowerCase()) {
+      logInfo("onIntervalTrigger: Trigger định kỳ chạy bởi tài khoản cũ (" + effectiveUser + "), nhưng quyền gửi thuộc về: " + designatedSender + ". Tự động bỏ qua và tự hủy trigger thừa của tài khoản này.");
+      _removeAllMyTriggersSilently();
+      return;
+    }
+    
     // KIỂM TRA RÀNG BUỘC KHUNG GIỜ
     var startTime = normalizeTimeString(config["Khung giờ tự động bắt đầu"]);
     var endTime = normalizeTimeString(config["Khung giờ tự động kết thúc"]);
@@ -364,13 +395,101 @@ function toggleDailyTrigger() {
     }
   }
   
+  var config = getConfig();
+  var currentOwner = config["Email đang gửi hiện tại"] || config["Người phụ trách gửi tự động"] || "";
+  var activeUser = getCurrentUserEmail();
+
   if (hasTrigger) {
     removeDailyTrigger();
     setConfig("Email đang gửi hiện tại", "Đã tắt");
     setConfig("Giờ gửi tự động", "Đã tắt");
     showToast("Đã tắt tính năng tự động kiểm tra định kỳ.", "Lịch tự động");
   } else {
+    if (!validateSenderOwnership("Bật gửi tự động định kỳ")) {
+      return;
+    }
     setupIntervalTrigger();
+  }
+}
+
+/**
+ * Kiểm tra và xử lý xung đột quyền gửi giữa tài khoản đang thao tác và tài khoản đang phụ trách gửi tự động
+ * Thông báo chi tiết tài khoản nào đang gửi và hướng dẫn yêu cầu tài khoản đó tắt trước khi chuyển giao
+ * @param {String} actionName Tên hành động thực hiện (ví dụ: "Bật gửi tự động định kỳ", "Gửi email hàng loạt")
+ * @returns {Boolean} true nếu được phép tiếp tục; false nếu bị hủy bỏ
+ */
+function validateSenderOwnership(actionName) {
+  var config = getConfig();
+  var currentOwner = String(config["Email đang gửi hiện tại"] || config["Người phụ trách gửi tự động"] || "").trim();
+  var activeUser = getCurrentUserEmail();
+  
+  // Nếu chưa có ai phụ trách hoặc hệ thống đang ở trạng thái Đã tắt
+  if (!currentOwner || currentOwner === "Đã tắt" || !activeUser || activeUser === "Tài khoản hiện tại") {
+    return true;
+  }
+  
+  // Nếu chính là tài khoản đang phụ trách thao tác
+  if (currentOwner.toLowerCase() === activeUser.toLowerCase()) {
+    return true;
+  }
+  
+  // Kiểm tra ngữ cảnh giao diện UI (nếu là trigger ngầm thì bỏ qua, Identity Guard sẽ tự xử lý)
+  var ui;
+  try {
+    ui = SpreadsheetApp.getUi();
+  } catch (e) {
+    return false;
+  }
+  if (!ui) return true;
+  
+  // PHÁT HIỆN XUNG ĐỘT QUYỀN GỬI: Hiển thị cảnh báo rõ ràng
+  var title = "⚠️ CẢNH BÁO: HỆ THỐNG ĐANG CÓ TÀI KHOẢN KHÁC PHỤ TRÁCH GỬI";
+  var message = "Hệ thống hiện ĐANG ĐƯỢC CÀI ĐẶT GỬI TỰ ĐỘNG bởi tài khoản:\n" +
+                "👉 [" + currentOwner + "]\n\n" +
+                "Trong khi đó, bạn đang đăng nhập thực hiện thao tác: [" + (actionName || "Gửi email") + "] bằng tài khoản:\n" +
+                "👉 [" + activeUser + "]\n\n" +
+                "--------------------------------------------------\n" +
+                "📌 ĐỂ CHUYỂN TIẾP QUYỀN GỬI SANG CHO BẠN (" + activeUser + "):\n\n" +
+                "1. Vui lòng liên hệ và YÊU CẦU TÀI KHOẢN [" + currentOwner + "] đăng nhập vào Sheet này.\n" +
+                "2. Chọn menu: 'Hệ thống Email' ➔ 'Lịch tự động' ➔ 'Tắt gửi tự động' (hoặc 'Xóa toàn bộ trigger').\n" +
+                "3. Sau khi [" + currentOwner + "] đã tắt, bạn mới có thể bấm kích hoạt để gửi bằng hòm thư của bạn.\n\n" +
+                "--------------------------------------------------\n" +
+                "❓ BẠN CÓ MUỐN TIẾP QUẢN CƯỠNG CHẾ NGAY KHÔNG?\n" +
+                "(Dành cho Quản trị viên hoặc khi không thể liên hệ được " + currentOwner + "):\n" +
+                "• Bấm YES (Đồng ý): Bạn tiếp quản ngay. Quyền gửi lập tức chuyển sang [" + activeUser + "], trigger cũ của [" + currentOwner + "] sẽ tự động bị hủy.\n" +
+                "• Bấm NO (Hủy bỏ): Hủy thao tác. Vui lòng liên hệ [" + currentOwner + "] tắt trước để đảm bảo an toàn.";
+
+  var proceed = showConfirm(title, message);
+  if (!proceed) {
+    showToast("Đã hủy thao tác. Quyền gửi tự động vẫn thuộc về: " + currentOwner, "Đã hủy", 6);
+    logWarning("Xung đột quyền gửi: Người dùng [" + activeUser + "] đã hủy thao tác vì [" + currentOwner + "] đang phụ trách.");
+    return false;
+  }
+  
+  // Người dùng xác nhận cưỡng chế tiếp quản quyền gửi
+  setConfig("Email đang gửi hiện tại", activeUser);
+  config["Email đang gửi hiện tại"] = activeUser;
+  showToast("Đã tiếp quản quyền gửi thành công! Người gửi mới: " + activeUser, "Tiếp quản thành công", 6);
+  logInfo("Chuyển giao quyền gửi: [" + activeUser + "] đã tiếp quản quyền gửi từ [" + currentOwner + "].");
+  return true;
+}
+
+/**
+ * Tự động xóa sạch toàn bộ triggers của tài khoản đang chạy hiện tại một cách âm thầm
+ * Dùng khi phát hiện tài khoản này là tài khoản cũ, quyền gửi đã chuyển cho người khác
+ */
+function _removeAllMyTriggersSilently() {
+  try {
+    var triggers = ScriptApp.getProjectTriggers();
+    var count = triggers.length;
+    for (var i = 0; i < triggers.length; i++) {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+    if (count > 0) {
+      logInfo("Đã tự hủy " + count + " trigger cũ của tài khoản không còn phụ trách.");
+    }
+  } catch (e) {
+    logError("Lỗi _removeAllMyTriggersSilently: " + e.message);
   }
 }
 

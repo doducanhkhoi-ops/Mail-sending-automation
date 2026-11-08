@@ -23,16 +23,16 @@ Sau khi mở bảng tính, thanh công cụ sẽ hiển thị menu **`Hệ thố
 * **Gửi thư thử nghiệm (Test):** Gửi một bản xem trước hoàn chỉnh (đã trộn dữ liệu mẫu) tới địa chỉ `Email test` để bạn kiểm tra giao diện, hình ảnh và tệp đính kèm trước khi gửi hàng loạt.
 * **Tạm dừng / Tiếp tục gửi:** Dừng tạm thời hoặc tiếp tục tiến trình gửi đợt bất kỳ lúc nào.
 * **Menu `Lịch tự động`:**
-  * **Bật / Tắt gửi tức thì khi có Form Submit:** Kích hoạt chế độ gửi realtime (Zero latency). Cứ khi nào có người gửi Google Form, nhập tay thêm dòng, hoặc dùng `IMPORTRANGE` kéo dòng mới về là hệ thống lập tức gửi ngay (~1 giây), đồng thời tự động quét và gửi sạch các mail chưa gửi đang tồn đọng trong danh sách (Pool).
+  * **Bật / Tắt gửi tức thì khi có Form Submit:** Tự động gửi email ngay khi có người gửi Google Form hoặc nhập thêm dòng mới vào bảng tính. Hệ thống gửi ngay cho liên hệ mới, đồng thời xử lý các mail chưa gửi còn tồn đọng trong danh sách.
   * **Bật / Tắt kiểm tra định kỳ (15 phút):** Kích hoạt chế độ kiểm tra quét danh sách mỗi 15 phút. Hệ thống sẽ **gửi ngay lập tức** các email đang có sẵn, sau đó tiếp tục duy trì lịch quét dữ liệu mới mỗi 15 phút.
   * **Danh sách trigger đang hoạt động:** Kiểm tra các tiến trình hẹn giờ ngầm đang bật.
   * **Xóa toàn bộ trigger:** Hủy bỏ toàn bộ lịch hẹn giờ ngầm.
 * **Menu `Tiện ích`:**
   * **Cập nhật Dashboard:** Tự động thiết lập hệ thống công thức trực tiếp (Live Formulas) cho toàn bộ Dashboard.
-  * **Rút gọn cấu hình:** 1-Click dọn dẹp các mục dư thừa (như Tiêu đề email, Chế độ nội dung, CC, BCC), đưa bảng Cấu hình về tinh gọn với `Email đang gửi hiện tại` và đồng bộ giao diện toàn bộ bảng tính.
   * **Kiểm tra email trùng lặp:** Quét và cảnh báo các địa chỉ email xuất hiện nhiều lần (hệ thống mặc định vẫn gửi cho toàn bộ các dòng để bảo đảm đầy đủ dữ liệu từng người).
   * **Danh sách thư nháp Gmail:** Liệt kê chính xác danh sách tên các thư nháp hiện có trong Gmail của bạn.
   * **Đặt lại trạng thái gửi:** Xóa toàn bộ trạng thái `Đã gửi` / `Lỗi` để cho phép gửi lại từ đầu.
+  * **Làm mới định dạng các bảng:** Đồng bộ và chuẩn hóa thẩm mỹ giao diện cho toàn bộ các bảng tính.
 
 ---
 
@@ -49,9 +49,9 @@ Hệ thống được quản lý mã nguồn tập trung qua Thư viện (Librar
 3. Dán mã Script ID ở trên vào ô tìm kiếm và nhấn **Tra cứu**.
 4. Cấu hình 2 thông số:
    * **Mã định danh (Identifier):** Đổi tên thành chính xác chữ **`EmailSystem`** (viết liền, đúng chữ hoa/thường).
-   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`33`**.
+   * **Phiên bản (Version):** Chọn phiên bản mới nhất: **`38`**.
    * Nhấn nút **Thêm (Add)**.
-   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **33** và bấm **Lưu**).*
+   *(Lưu ý: Nếu bạn đã từng thêm thư viện từ trước, chỉ cần nhấp chuột vào chữ `EmailSystem` ở cột bên trái, chuyển sang phiên bản **38** và bấm **Lưu**).*
 5. Xóa toàn bộ nội dung cũ trong trình soạn thảo, sau đó dán đoạn mã cầu nối sau vào:
 
 ```javascript
@@ -99,4 +99,4 @@ function onScheduledStartTrigger() { EmailSystem.onScheduledStartTrigger(); }
   * `Email test`: Địa chỉ email nhận bản thử nghiệm và nhận thông báo khi hoàn tất.
 * **Danh sách:** Dữ liệu người nhận. Cột đầu tiên là `Email`, có một cột tiêu đề là `Trạng thái`. Các cột còn lại (ví dụ: `Tên`, `Công ty`...) được dùng làm biến trộn dữ liệu `{{...}}`. Cột Trạng thái tự động đổi màu xanh khi gửi thành công và màu đỏ khi có lỗi.
 * **Dashboard:** Bảng điều khiển tiến trình gồm 5 thẻ chỉ số KPI (Tổng liên hệ, Đã gửi, Chờ gửi, Lỗi, Hạn mức ngày), thanh tiến độ trực quan Sparkline và bảng thông số vận hành.
-* **Lịch sử:** Nhật ký chi tiết của từng lượt gửi kèm thời gian chính xác, tiêu đề, mã đợt và chi tiết lỗi nếu có.
+* **Lịch sử:** Nhật ký chi tiết của từng lượt gửi kèm thời gian chính xác, tài khoản gửi, email người nhận, tiêu đề, trạng thái, mã đợt và chi tiết lỗi nếu có.

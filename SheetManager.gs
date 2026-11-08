@@ -114,15 +114,62 @@ function markAsError(rowNumber, errorMsg) {
 }
 
 /**
- * Ghi một dòng nhật ký vào bảng Lịch sử
+ * Đảm bảo bảng Lịch sử có đầy đủ các cột tiêu chuẩn, bao gồm cột Tài khoản gửi
+ * Nếu bảng cũ đang có 6 cột, tự động chèn cột "Tài khoản gửi" vào vị trí cột B
+ * @param {Sheet} sheet Bảng tính Lịch sử
  */
-function addLogEntry(email, subject, status, error, batchNum) {
+function ensureLogHeaders(sheet) {
+  if (!sheet) return;
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < 1) {
+    sheet.getRange("A1:G1").setValues([["Thời gian", "Tài khoản gửi", "Email người nhận", "Tiêu đề", "Trạng thái", "Chi tiết lỗi", "Đợt #"]]);
+    return;
+  }
+  
+  var headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+  var hasSenderCol = false;
+  for (var i = 0; i < headers.length; i++) {
+    var h = String(headers[i]).toLowerCase();
+    if ((h.indexOf("gửi") !== -1 && (h.indexOf("tài khoản") !== -1 || h.indexOf("email") !== -1 || h.indexOf("người") !== -1)) || h.indexOf("sender") !== -1) {
+      hasSenderCol = true;
+      break;
+    }
+  }
+  
+  if (!hasSenderCol) {
+    // Chèn thêm 1 cột mới ngay sau cột A (Thời gian) để làm cột "Tài khoản gửi"
+    sheet.insertColumnAfter(1);
+    sheet.getRange("B1").setValue("Tài khoản gửi");
+    sheet.getRange("A1").setValue("Thời gian");
+    if (String(sheet.getRange("C1").getValue()).trim().toLowerCase() === "email") {
+      sheet.getRange("C1").setValue("Email người nhận");
+    }
+  }
+}
+
+/**
+ * Ghi một dòng nhật ký vào bảng Lịch sử
+ * @param {String} email Địa chỉ email người nhận
+ * @param {String} subject Tiêu đề email
+ * @param {String} status Trạng thái (Thành công / Lỗi)
+ * @param {String} error Chi tiết lỗi nếu có
+ * @param {String|Number} batchNum Mã đợt gửi
+ * @param {String} senderEmail Tài khoản Google thực hiện gửi
+ */
+function addLogEntry(email, subject, status, error, batchNum, senderEmail) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = findSheet(ss, SHEET_LOG, SHEET_LOG_LEGACY);
   if (!sheet) return;
   
+  if (!senderEmail) {
+    senderEmail = getCurrentUserEmail();
+  }
+  
+  ensureLogHeaders(sheet);
+  
   sheet.appendRow([
     formatDateVN(new Date()),
+    senderEmail,
     email,
     subject,
     status,
@@ -445,7 +492,7 @@ function resetAllStatus() {
 }
 
 /**
- * Định dạng thẩm mỹ chuyên nghiệp và đồng bộ chuẩn MECE cho bảng Cấu hình
+ * Định dạng thẩm mỹ và đồng bộ bảng Cấu hình
  */
 function formatConfigSheet() {
   syncConfigSheet();
@@ -516,7 +563,9 @@ function formatLogSheet() {
   var sheet = findSheet(ss, SHEET_LOG, SHEET_LOG_LEGACY);
   if (!sheet) return;
   
-  var lastCol = Math.max(sheet.getLastColumn(), 6);
+  ensureLogHeaders(sheet);
+  
+  var lastCol = Math.max(sheet.getLastColumn(), 7);
   var lastRow = Math.max(sheet.getLastRow(), 2);
   
   sheet.getRange(1, 1, 1, lastCol)
@@ -528,12 +577,13 @@ function formatLogSheet() {
   sheet.setRowHeight(1, 34);
   sheet.setFrozenRows(1);
   
-  sheet.setColumnWidth(1, 170);
-  sheet.setColumnWidth(2, 260);
-  sheet.setColumnWidth(3, 280);
-  sheet.setColumnWidth(4, 130);
-  sheet.setColumnWidth(5, 260);
-  sheet.setColumnWidth(6, 80);
+  sheet.setColumnWidth(1, 170); // Thời gian
+  sheet.setColumnWidth(2, 240); // Tài khoản gửi
+  sheet.setColumnWidth(3, 240); // Email người nhận
+  sheet.setColumnWidth(4, 260); // Tiêu đề
+  sheet.setColumnWidth(5, 120); // Trạng thái
+  sheet.setColumnWidth(6, 220); // Chi tiết lỗi
+  sheet.setColumnWidth(7, 80);  // Đợt #
   
   if (lastRow >= 2) {
     for (var r = 2; r <= lastRow; r++) {
@@ -545,7 +595,8 @@ function formatLogSheet() {
     logRange.setFontSize(9.5).setVerticalAlignment("middle");
     logRange.setBorder(true, true, true, true, true, true, "#e2e8f0", SpreadsheetApp.BorderStyle.SOLID);
     
-    var statusLogRange = sheet.getRange(2, 4, lastRow - 1, 1);
+    // Cột Trạng thái nằm ở cột 5 (E)
+    var statusLogRange = sheet.getRange(2, 5, lastRow - 1, 1);
     var ruleLogSuccess = SpreadsheetApp.newConditionalFormatRule()
       .whenTextContains("Thành công")
       .setBackground("#dcfce7")

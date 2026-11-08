@@ -11,10 +11,11 @@
  * @returns {Boolean} true nếu gửi thành công
  */
 function sendSingleEmail(recipient, emailContent, config, batchNum) {
+  var currentSender = getCurrentUserEmail();
   try {
     if (!isValidEmail(recipient.email)) {
       markAsError(recipient.row, "Địa chỉ email không hợp lệ");
-      addLogEntry(recipient.email, "", "Lỗi", "Địa chỉ email không hợp lệ", batchNum);
+      addLogEntry(recipient.email, "", "Lỗi", "Địa chỉ email không hợp lệ", batchNum, currentSender);
       return false;
     }
     
@@ -57,7 +58,7 @@ function sendSingleEmail(recipient, emailContent, config, batchNum) {
     markAsDone(recipient.row);
     SpreadsheetApp.flush(); // Cập nhật màn hình Google Sheet ngay lập tức
     incrementQuota();
-    addLogEntry(recipient.email, personalSubject, "Thành công", "", batchNum);
+    addLogEntry(recipient.email, personalSubject, "Thành công", "", batchNum, currentSender);
     
     logInfo("Đã gửi thành công: " + recipient.email);
     return true;
@@ -65,7 +66,7 @@ function sendSingleEmail(recipient, emailContent, config, batchNum) {
   } catch (e) {
     var errorMsg = e.message || String(e);
     markAsError(recipient.row, errorMsg);
-    addLogEntry(recipient.email, "", "Lỗi", errorMsg, batchNum);
+    addLogEntry(recipient.email, "", "Lỗi", errorMsg, batchNum, currentSender);
     
     logError("Lỗi khi gửi đến " + recipient.email + ": " + errorMsg);
     return false;
@@ -82,6 +83,18 @@ function sendTestEmail() {
   if (!testEmail || !isValidEmail(testEmail)) {
     showAlert("Thông báo", "Vui lòng nhập địa chỉ 'Email test' hợp lệ trong bảng Cấu hình.");
     return;
+  }
+  
+  var activeUser = getCurrentUserEmail();
+  var designatedSender = String(config["Email đang gửi hiện tại"] || "").trim();
+  if (designatedSender && designatedSender !== "Đã tắt" && activeUser && activeUser !== "Tài khoản hiện tại" && designatedSender.toLowerCase() !== activeUser.toLowerCase()) {
+    var proceed = showConfirm(
+      "Xác nhận tài khoản gửi test",
+      "⚠️ Chú ý: Bạn đang đăng nhập bằng: " + activeUser + ".\n" +
+      "Email test sẽ được gửi từ hộp thư của: " + activeUser + ".\n\n" +
+      "Bạn có muốn tiếp tục gửi test không?"
+    );
+    if (!proceed) return;
   }
   
   var emailContent = getEmailContent(config);
@@ -126,7 +139,7 @@ function sendTestEmail() {
     var rawSenderName = config["Tên người gửi (Sender Name)"] || config["Tên người gửi"] || config["Sender Name"] || "";
     var senderName = String(rawSenderName).trim();
     if (senderName) {
-      options.name = replaceTemplateVars(senderName, recipient.data);
+      options.name = replaceTemplateVars(senderName, testRecipient.data);
     }
     
     if (emailContent.attachments && emailContent.attachments.length > 0) {

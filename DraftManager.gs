@@ -4,7 +4,7 @@
 
 /**
  * Lấy nội dung email trực tiếp từ thư nháp Gmail
- * Chuẩn MECE: Có điền tên -> tìm theo tên; Để trống -> tự động lấy thư nháp mới nhất
+ * Có điền tên -> tìm theo tên; Để trống -> tự động lấy thư nháp mới nhất
  * @param {Object} config - Bảng cấu hình
  * @returns {Object|null} { subject, htmlBody, attachments, inlineImages }
  */

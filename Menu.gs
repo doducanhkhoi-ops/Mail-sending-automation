@@ -26,12 +26,12 @@ function onOpen() {
         .addItem("Xóa toàn bộ trigger", "menuRemoveAllTriggers")
       )
       .addSubMenu(ui.createMenu("Tiện ích")
-        .addItem("Kiểm tra Hạn mức Quota & Chênh lệch", "menuCheckQuota")
         .addItem("Cập nhật Dashboard", "menuUpdateDashboard")
-        .addItem("Rút gọn cấu hình", "menuFormatAllSheets")
         .addItem("Kiểm tra email trùng lặp", "menuCheckDuplicates")
         .addItem("Danh sách thư nháp Gmail", "menuListDrafts")
         .addItem("Đặt lại trạng thái gửi", "menuResetStatus")
+        .addSeparator()
+        .addItem("Làm mới định dạng các bảng", "menuFormatAllSheets")
       )
       .addToUi();
   } catch (e) {
@@ -127,12 +127,12 @@ function menuUpdateDashboard() {
 
 function menuSyncConfig() {
   formatAllSheets();
-  showToast("Đã rút gọn cấu hình và làm đẹp toàn bộ các bảng tính.", "Hoàn tất");
+  showToast("Đã đồng bộ và làm đẹp giao diện toàn bộ các bảng tính.", "Hoàn tất");
 }
 
 function menuFormatAllSheets() {
   formatAllSheets();
-  showToast("Đã rút gọn cấu hình và làm đẹp toàn bộ các bảng tính.", "Hoàn tất");
+  showToast("Đã đồng bộ và làm đẹp giao diện toàn bộ các bảng tính.", "Hoàn tất");
 }
 
 function menuCheckDuplicates() {

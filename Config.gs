@@ -12,7 +12,7 @@ var SHEET_LOG_LEGACY = "📊 Lịch sử";
 var SHEET_DASH     = "Dashboard";
 var SHEET_DASH_LEGACY = "📈 Dashboard";
 
-// Giá trị cấu hình mặc định tinh gọn chuẩn MECE (Cột A)
+// Giá trị cấu hình mặc định (Cột A)
 var CONFIG_DEFAULTS = {
   "Tiêu đề thư nháp Gmail":   "",
   "Tên người gửi (Sender Name)": "",
@@ -106,15 +106,67 @@ function setConfig(key, value) {
 }
 
 /**
+ * Đếm chính xác số email đã gửi thành công trong ngày hôm nay từ bảng Danh sách
+ * Nguồn dữ liệu thực tế duy nhất (Single Source of Truth), không phụ thuộc cache và không bị mất khi reset bảng
+ * @returns {Number} Số lượng email đã gửi hôm nay
+ */
+function countTodaySentFromSheet() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = findSheet(ss, SHEET_DATA, SHEET_DATA_LEGACY);
+    if (!sheet) return 0;
+    
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return 0;
+    
+    var lastCol = sheet.getLastColumn();
+    var headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+    var statusCol = -1;
+    for (var j = 0; j < headers.length; j++) {
+      var h = String(headers[j]).trim().toLowerCase();
+      if (h === "trạng thái" || h === "status") {
+        statusCol = j + 1;
+        break;
+      }
+    }
+    if (statusCol === -1) return 0;
+    
+    var statuses = sheet.getRange(2, statusCol, lastRow - 1, 1).getDisplayValues();
+    var today = formatDateVN(new Date()).split(" ")[0]; // "dd/MM/yyyy"
+    var count = 0;
+    for (var i = 0; i < statuses.length; i++) {
+      var s = String(statuses[i][0]).trim();
+      if ((s.indexOf("Đã gửi") !== -1 || s.indexOf("Thành công") !== -1) && s.indexOf(today) !== -1) {
+        count++;
+      }
+    }
+    return count;
+  } catch(e) {
+    logError("Lỗi countTodaySentFromSheet: " + e.message);
+    return 0;
+  }
+}
+
+/**
  * Đo và tính toán toàn bộ chi tiết hạn mức Quota của tài khoản hiện tại kèm sự chênh lệch
  * @returns {Object} { userEmail, accountType, maxQuota, remainingQuota, sentViaSheet, usedOutside, statusText, isSafe }
  */
 function refreshAndGetQuotaDetails() {
   var userEmail = getCurrentUserEmail();
   var config = getConfig();
-  var sentViaSheet = parseInt(config["Quota đã dùng hôm nay"]) || 0;
   
-  // Xác định hạn mức tối đa do Google cấp (100 đối với Gmail cá nhân, 1500 đối với Workspace)
+  // Lấy số thư đã gửi hôm nay: Ưu tiên đếm trực tiếp từ Danh sách thực tế (Single Source of Truth)
+  var realSentToday = countTodaySentFromSheet();
+  var recordedSent = parseInt(config["Quota đã dùng hôm nay"]) || 0;
+  var sentViaSheet = Math.max(realSentToday, recordedSent);
+  
+  // Đồng bộ lại vào config nếu có sự chênh lệch
+  if (sentViaSheet !== recordedSent) {
+    setConfig("Quota đã dùng hôm nay", String(sentViaSheet));
+    config["Quota đã dùng hôm nay"] = String(sentViaSheet);
+  }
+  
+  // Xác định hạn mức tối đa do Google cấp (100 đối với Gmail cá nhân / Edu, 1500 đối với Workspace)
   var isPersonal = (userEmail.toLowerCase().indexOf("@gmail.com") !== -1 || userEmail.toLowerCase().indexOf("@googlemail.com") !== -1);
   var maxQuota = isPersonal ? 100 : 1500;
   var accountType = isPersonal ? "Gmail cá nhân (@gmail.com)" : "Google Workspace doanh nghiệp";
@@ -125,9 +177,14 @@ function refreshAndGetQuotaDetails() {
     if (live !== null && live !== undefined) {
       remainingQuota = live;
       // Nếu số còn lại > 100 thì chắc chắn là tài khoản Workspace
-      if (remainingQuota > 100 && maxQuota < 1500) {
+      if (remainingQuota > 100) {
         maxQuota = 1500;
         accountType = "Google Workspace doanh nghiệp";
+      } else {
+        maxQuota = 100;
+        if (!isPersonal) {
+          accountType = "Google Workspace giáo dục (@ftu.edu.vn)";
+        }
       }
     }
   } catch (e) {
@@ -205,9 +262,8 @@ function hasQuotaRemaining() {
 }
 
 /**
- * Đồng bộ và nâng cấp bảng Cấu hình sang chuẩn MECE
- * Tự động loại bỏ các tham số cũ dư thừa (Tiêu đề email, Chế độ nội dung, Nội dung HTML)
- * Bảo lưu toàn bộ dữ liệu cấu hình thực tế của người dùng
+ * Đồng bộ bảng Cấu hình
+ * Tự động chuẩn hóa các tham số và giữ nguyên dữ liệu đã nhập của người dùng
  */
 function syncConfigSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -230,7 +286,7 @@ function syncConfigSheet() {
     }
   }
   
-  // 2. Kế thừa thông minh từ các khóa cũ sang khóa MECE mới
+  // 2. Chuyển tiếp giá trị từ các khóa cũ sang khóa mới nếu có
   var unifiedDraft = currentValues["Tiêu đề thư nháp Gmail"] || 
                      currentValues["Tiêu đề bản nháp"] || 
                      (currentValues["Chế độ nội dung"] === "draft_by_subject" ? currentValues["Tiêu đề email"] : "") || 
@@ -273,7 +329,7 @@ function syncConfigSheet() {
     "Trạng thái hệ thống":     "Hệ thống tự động cập nhật: Sẵn sàng / Đang gửi... / Tạm dừng / Hoàn tất"
   };
   
-  // 3. Xóa validation cũ và xóa sạch nội dung cũ để ghi lại chuẩn MECE
+  // 3. Xóa validation cũ và xóa sạch nội dung cũ để ghi lại danh sách cấu hình
   sheet.getRange("B2:B30").clearDataValidations();
   sheet.clearContents();
   sheet.clearFormats();
@@ -286,7 +342,7 @@ function syncConfigSheet() {
   sheet.setRowHeight(1, 36);
   sheet.setFrozenRows(1);
   
-  // 5. Ghi từng dòng tham số chuẩn MECE
+  // 5. Ghi từng dòng tham số
   var row = 2;
   for (var key in CONFIG_DEFAULTS) {
     var val = (currentValues[key] !== undefined && currentValues[key] !== "") ? currentValues[key] : CONFIG_DEFAULTS[key];
@@ -301,6 +357,15 @@ function syncConfigSheet() {
     }
     if (key === "Hạn mức Google còn lại") {
       val = liveQuotaVal;
+    }
+    if (key === "Hạn mức tối đa (Max Quota)") {
+      var lqNum = parseInt(liveQuotaVal) || 100;
+      val = (lqNum > 100) ? "1500" : "100";
+    }
+    if (key === "Quota đã dùng hôm nay") {
+      var realSent = countTodaySentFromSheet();
+      var curValNum = parseInt(val) || 0;
+      val = String(Math.max(realSent, curValNum));
     }
     
     if (key === "Khung giờ tự động bắt đầu" || key === "Khung giờ tự động kết thúc") {
@@ -377,15 +442,16 @@ function initAllSheets() {
   
   if (!findSheet(ss, SHEET_LOG, SHEET_LOG_LEGACY)) {
     var logSheet = ss.insertSheet(SHEET_LOG);
-    logSheet.getRange("A1:F1").setValues([["Thời gian", "Email", "Tiêu đề", "Trạng thái", "Chi tiết lỗi", "Đợt #"]]);
-    logSheet.getRange("A1:F1").setFontWeight("bold")
-      .setBackground("#1a365d").setFontColor("#ffffff");
-    logSheet.setColumnWidth(1, 180);
-    logSheet.setColumnWidth(2, 260);
-    logSheet.setColumnWidth(3, 300);
-    logSheet.setColumnWidth(4, 120);
-    logSheet.setColumnWidth(5, 250);
-    logSheet.setColumnWidth(6, 80);
+    logSheet.getRange("A1:G1").setValues([["Thời gian", "Tài khoản gửi", "Email người nhận", "Tiêu đề", "Trạng thái", "Chi tiết lỗi", "Đợt #"]]);
+    logSheet.getRange("A1:G1").setFontWeight("bold")
+      .setBackground("#0f172a").setFontColor("#ffffff");
+    logSheet.setColumnWidth(1, 170);
+    logSheet.setColumnWidth(2, 240);
+    logSheet.setColumnWidth(3, 240);
+    logSheet.setColumnWidth(4, 260);
+    logSheet.setColumnWidth(5, 120);
+    logSheet.setColumnWidth(6, 220);
+    logSheet.setColumnWidth(7, 80);
   }
   
   if (!findSheet(ss, SHEET_DASH, SHEET_DASH_LEGACY)) {
