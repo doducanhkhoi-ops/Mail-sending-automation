@@ -135,29 +135,39 @@ function removeFormSubmitTrigger() {
  * Bảo vệ: Nếu tài khoản khác đã bật, cảnh báo để tránh trùng lặp
  */
 function toggleFormSubmitTrigger() {
+  var config = getConfig();
+  var currentOwner = String(config["Email đang gửi hiện tại"] || config["Người phụ trách gửi tự động"] || "").trim();
+  var activeUser = getCurrentUserEmail();
+  
   var triggers = ScriptApp.getProjectTriggers();
-  var hasTrigger = false;
+  var hasMyTrigger = false;
   
   for (var i = 0; i < triggers.length; i++) {
     var func = triggers[i].getHandlerFunction();
     if (func === "onFormSubmitTrigger" || func === "onChangeTrigger") {
-      hasTrigger = true;
+      hasMyTrigger = true;
       break;
     }
   }
-  
-  var config = getConfig();
-  var currentOwner = config["Email đang gửi hiện tại"] || config["Người phụ trách gửi tự động"] || "";
-  var activeUser = getCurrentUserEmail();
 
-  if (hasTrigger) {
-    removeFormSubmitTrigger();
-    showToast("Đã TẮT chế độ tự động gửi email khi có Form Submit.", "Form Submit");
-  } else {
-    // Nếu trong Cấu hình ghi nhận người khác đang bật mà bản thân tài khoản này chưa có trigger
+  // Nếu trong Cấu hình đang ghi nhận một tài khoản khác phụ trách
+  var isOtherOwner = (currentOwner && currentOwner !== "Đã tắt" && activeUser && currentOwner.toLowerCase() !== activeUser.toLowerCase());
+
+  if (isOtherOwner) {
     if (!validateSenderOwnership("Bật gửi tự động khi có Form Submit")) {
       return;
     }
+    // Sau khi người dùng đồng ý tiếp quản quyền gửi
+    removeFormSubmitTrigger();
+    setupFormSubmitTrigger();
+    return;
+  }
+
+  // Nếu chính mình đang bật thì bấm vào sẽ tắt
+  if (hasMyTrigger || (currentOwner && currentOwner.toLowerCase() === activeUser.toLowerCase())) {
+    removeFormSubmitTrigger();
+    showToast("Đã tắt chế độ tự động gửi email khi có Form Submit.", "Form Submit");
+  } else {
     setupFormSubmitTrigger();
   }
 }
@@ -384,30 +394,41 @@ function onIntervalTrigger() {
  * Bật / Tắt chế độ tự động kiểm tra định kỳ
  */
 function toggleDailyTrigger() {
+  var config = getConfig();
+  var currentOwner = String(config["Email đang gửi hiện tại"] || config["Người phụ trách gửi tự động"] || "").trim();
+  var activeUser = getCurrentUserEmail();
+
   var triggers = ScriptApp.getProjectTriggers();
-  var hasTrigger = false;
+  var hasMyTrigger = false;
   
   for (var i = 0; i < triggers.length; i++) {
     var func = triggers[i].getHandlerFunction();
     if (func === "onIntervalTrigger" || func === "onDailyTrigger") {
-      hasTrigger = true;
+      hasMyTrigger = true;
       break;
     }
   }
-  
-  var config = getConfig();
-  var currentOwner = config["Email đang gửi hiện tại"] || config["Người phụ trách gửi tự động"] || "";
-  var activeUser = getCurrentUserEmail();
 
-  if (hasTrigger) {
+  // Nếu trong Cấu hình đang ghi nhận một tài khoản khác phụ trách
+  var isOtherOwner = (currentOwner && currentOwner !== "Đã tắt" && activeUser && currentOwner.toLowerCase() !== activeUser.toLowerCase());
+
+  if (isOtherOwner) {
+    if (!validateSenderOwnership("Bật gửi tự động định kỳ")) {
+      return;
+    }
+    // Sau khi người dùng đồng ý tiếp quản quyền gửi
+    removeDailyTrigger();
+    setupIntervalTrigger();
+    return;
+  }
+
+  // Nếu chính mình đang bật thì bấm vào sẽ tắt
+  if (hasMyTrigger || (currentOwner && currentOwner.toLowerCase() === activeUser.toLowerCase())) {
     removeDailyTrigger();
     setConfig("Email đang gửi hiện tại", "Đã tắt");
     setConfig("Giờ gửi tự động", "Đã tắt");
     showToast("Đã tắt tính năng tự động kiểm tra định kỳ.", "Lịch tự động");
   } else {
-    if (!validateSenderOwnership("Bật gửi tự động định kỳ")) {
-      return;
-    }
     setupIntervalTrigger();
   }
 }

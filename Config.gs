@@ -106,11 +106,82 @@ function setConfig(key, value) {
 }
 
 /**
- * Đếm chính xác số email đã gửi thành công trong ngày hôm nay từ bảng Danh sách
- * Nguồn dữ liệu thực tế duy nhất (Single Source of Truth), không phụ thuộc cache và không bị mất khi reset bảng
+ * Đếm chính xác số email đã gửi thành công trong ngày hôm nay từ bảng Lịch sử (theo từng tài khoản hoặc toàn bảng)
+ * @param {String} [targetSenderEmail] - Email tài khoản cần lọc (nếu để trống sẽ đếm toàn bộ)
  * @returns {Number} Số lượng email đã gửi hôm nay
  */
-function countTodaySentFromSheet() {
+function countTodaySentFromLog(targetSenderEmail) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = findSheet(ss, SHEET_LOG, SHEET_LOG_LEGACY);
+    if (!sheet) return 0;
+    
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return 0;
+    
+    var lastCol = sheet.getLastColumn();
+    var headers = sheet.getRange(1, 1, 1, lastCol).getDisplayValues()[0];
+    
+    var timeColIndex = 0;
+    var senderColIndex = -1;
+    var statusColIndex = -1;
+    
+    for (var j = 0; j < headers.length; j++) {
+      var h = String(headers[j]).trim().toLowerCase();
+      if (h.indexOf("thời gian") !== -1 || h === "time" || h === "date") {
+        timeColIndex = j;
+      }
+      if ((h.indexOf("tài khoản") !== -1 && h.indexOf("gửi") !== -1) || h === "sender" || h.indexOf("người gửi") !== -1) {
+        senderColIndex = j;
+      }
+      if (h.indexOf("trạng thái") !== -1 || h === "status") {
+        statusColIndex = j;
+      }
+    }
+    
+    if (statusColIndex === -1) return 0;
+    
+    var data = sheet.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues();
+    var today = formatDateVN(new Date()).split(" ")[0]; // "dd/MM/yyyy"
+    var count = 0;
+    var targetEmailLower = targetSenderEmail ? String(targetSenderEmail).trim().toLowerCase() : "";
+    
+    for (var i = 0; i < data.length; i++) {
+      var row = data[i];
+      var timeStr = String(row[timeColIndex]).trim();
+      var statusStr = String(row[statusColIndex]).trim();
+      var senderStr = (senderColIndex !== -1) ? String(row[senderColIndex]).trim().toLowerCase() : "";
+      
+      // Kiểm tra gửi hôm nay và thành công
+      var isToday = (timeStr.indexOf(today) !== -1);
+      var isSuccess = (statusStr.indexOf("Thành công") !== -1 || statusStr.indexOf("Đã gửi") !== -1 || statusStr.indexOf("Done") !== -1);
+      
+      if (isToday && isSuccess) {
+        if (!targetEmailLower || senderStr === targetEmailLower) {
+          count++;
+        }
+      }
+    }
+    return count;
+  } catch(e) {
+    logError("Lỗi countTodaySentFromLog: " + e.message);
+    return 0;
+  }
+}
+
+/**
+ * Đếm chính xác số email đã gửi thành công trong ngày hôm nay
+ * Ưu tiên đối chiếu từ bảng Lịch sử (có phân loại theo người gửi), dự phòng bảng Danh sách
+ * @param {String} [senderEmail] - Email của người gửi cần đếm
+ * @returns {Number} Số lượng email đã gửi hôm nay
+ */
+function countTodaySentFromSheet(senderEmail) {
+  var logCount = countTodaySentFromLog(senderEmail);
+  if (logCount > 0 || senderEmail) {
+    return logCount;
+  }
+  
+  // Dự phòng: Đếm từ bảng Danh sách nếu bảng Lịch sử chưa có dữ liệu
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = findSheet(ss, SHEET_DATA, SHEET_DATA_LEGACY);
@@ -155,9 +226,20 @@ function refreshAndGetQuotaDetails() {
   var userEmail = getCurrentUserEmail();
   var config = getConfig();
   
-  // Lấy số thư đã gửi hôm nay: Ưu tiên đếm trực tiếp từ Danh sách thực tế (Single Source of Truth)
-  var realSentToday = countTodaySentFromSheet();
-  var recordedSent = parseInt(config["Quota đã dùng hôm nay"]) || 0;
+  // Lấy số thư đã gửi hôm nay của chính tài khoản này (tính từ bảng Lịch sử)
+  var realSentToday = countTodaySentFromSheet(userEmail);
+  var todayDateStr = formatDateVN(new Date()).split(" ")[0]; // "dd/MM/yyyy"
+  var lastQuotaDate = config["Ngày quota"] || "";
+  
+  // Tự động làm mới bộ đếm khi sang ngày mới
+  var recordedSent = 0;
+  if (lastQuotaDate === todayDateStr) {
+    recordedSent = parseInt(config["Quota đã dùng hôm nay"]) || 0;
+  } else {
+    setConfig("Ngày quota", todayDateStr);
+    config["Ngày quota"] = todayDateStr;
+  }
+  
   var sentViaSheet = Math.max(realSentToday, recordedSent);
   
   // Đồng bộ lại vào config nếu có sự chênh lệch
@@ -365,6 +447,16 @@ function syncConfigSheet() {
     if (key === "Hạn mức tối đa (Max Quota)") {
       var lqNum = parseInt(liveQuotaVal) || 100;
       val = (lqNum > 100) ? "1500" : "100";
+    }
+    if (key === "Tình trạng hạn mức") {
+      var safeRem = parseInt(liveQuotaVal) || 100;
+      if (safeRem <= 1) {
+        val = "Đã hết hạn mức (Dừng gửi an toàn)";
+      } else if (safeRem <= 20) {
+        val = "Cảnh báo: Sắp hết (Còn " + safeRem + " lượt)";
+      } else {
+        val = "An toàn (Còn " + safeRem + " lượt)";
+      }
     }
     if (key === "Quota đã dùng hôm nay") {
       var realSent = countTodaySentFromSheet();
