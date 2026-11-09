@@ -443,21 +443,21 @@ function validateSenderOwnership(actionName) {
   if (!ui) return true;
   
   // PHÁT HIỆN XUNG ĐỘT QUYỀN GỬI: Hiển thị cảnh báo rõ ràng
-  var title = "⚠️ CẢNH BÁO: HỆ THỐNG ĐANG CÓ TÀI KHOẢN KHÁC PHỤ TRÁCH GỬI";
-  var message = "Hệ thống hiện ĐANG ĐƯỢC CÀI ĐẶT GỬI TỰ ĐỘNG bởi tài khoản:\n" +
-                "👉 [" + currentOwner + "]\n\n" +
+  var title = "CẢNH BÁO: HỆ THỐNG ĐANG CÓ TÀI KHOẢN KHÁC PHỤ TRÁCH GỬI";
+  var message = "Hệ thống hiện đang được cài đặt gửi tự động bởi tài khoản:\n" +
+                "  [" + currentOwner + "]\n\n" +
                 "Trong khi đó, bạn đang đăng nhập thực hiện thao tác: [" + (actionName || "Gửi email") + "] bằng tài khoản:\n" +
-                "👉 [" + activeUser + "]\n\n" +
+                "  [" + activeUser + "]\n\n" +
                 "--------------------------------------------------\n" +
-                "📌 ĐỂ CHUYỂN TIẾP QUYỀN GỬI SANG CHO BẠN (" + activeUser + "):\n\n" +
-                "1. Vui lòng liên hệ và YÊU CẦU TÀI KHOẢN [" + currentOwner + "] đăng nhập vào Sheet này.\n" +
-                "2. Chọn menu: 'Hệ thống Email' ➔ 'Lịch tự động' ➔ 'Tắt gửi tự động' (hoặc 'Xóa toàn bộ trigger').\n" +
+                "HƯỚNG DẪN CHUYỂN TIẾP QUYỀN GỬI SANG CHO BẠN (" + activeUser + "):\n\n" +
+                "1. Vui lòng liên hệ và yêu cầu tài khoản [" + currentOwner + "] đăng nhập vào Sheet này.\n" +
+                "2. Chọn menu: 'Hệ thống Email' -> 'Lịch tự động' -> 'Tắt gửi tự động' (hoặc 'Xóa toàn bộ trigger').\n" +
                 "3. Sau khi [" + currentOwner + "] đã tắt, bạn mới có thể bấm kích hoạt để gửi bằng hòm thư của bạn.\n\n" +
                 "--------------------------------------------------\n" +
-                "❓ BẠN CÓ MUỐN TIẾP QUẢN CƯỠNG CHẾ NGAY KHÔNG?\n" +
+                "BẠN CÓ MUỐN TIẾP QUẢN CƯỠNG CHẾ NGAY KHÔNG?\n" +
                 "(Dành cho Quản trị viên hoặc khi không thể liên hệ được " + currentOwner + "):\n" +
-                "• Bấm YES (Đồng ý): Bạn tiếp quản ngay. Quyền gửi lập tức chuyển sang [" + activeUser + "], trigger cũ của [" + currentOwner + "] sẽ tự động bị hủy.\n" +
-                "• Bấm NO (Hủy bỏ): Hủy thao tác. Vui lòng liên hệ [" + currentOwner + "] tắt trước để đảm bảo an toàn.";
+                "- Chọn YES (Đồng ý): Bạn tiếp quản ngay. Quyền gửi lập tức chuyển sang [" + activeUser + "], trigger cũ của [" + currentOwner + "] sẽ tự động bị hủy.\n" +
+                "- Chọn NO (Hủy bỏ): Hủy thao tác. Vui lòng liên hệ [" + currentOwner + "] tắt trước để đảm bảo an toàn.";
 
   var proceed = showConfirm(title, message);
   if (!proceed) {

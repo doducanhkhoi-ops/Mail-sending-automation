@@ -102,7 +102,7 @@ function onScheduledStartTrigger() { EmailSystem.onScheduledStartTrigger(); }
   * `Hạn mức tối đa (Max Quota)`: Hạn mức gửi thư trong ngày do Google cấp (100 đối với Gmail cá nhân/Edu, 1500 đối với Workspace).
   * `Hạn mức Google còn lại`: Số lượt gửi máy chủ Google còn cấp cho tài khoản này hôm nay (Hệ thống đo sống trực tiếp).
   * `Đã gửi ngoài Sheet (Chênh lệch)`: Số email đã gửi ngoài Sheet hôm nay (qua web Gmail, điện thoại hoặc script khác).
-  * `Tình trạng hạn mức`: Đánh giá mức độ an toàn (🟢 An toàn / 🟡 Cảnh báo / 🔴 Đã cạn).
+  * `Tình trạng hạn mức`: Đánh giá mức độ an toàn (An toàn / Cảnh báo / Đã hết).
   * `Quota đã dùng hôm nay`: Số email đã gửi thành công qua Sheet hôm nay (Đếm từ cột Trạng thái bảng Danh sách).
   * `Email test`: Địa chỉ email nhận bản thử nghiệm và nhận thông báo khi hoàn tất.
 * **Danh sách:** Dữ liệu người nhận. Cột đầu tiên là `Email`, có một cột tiêu đề là `Trạng thái`. Các cột còn lại (ví dụ: `Tên`, `Công ty`...) được dùng làm biến trộn dữ liệu `{{...}}`. Cột Trạng thái tự động đổi màu xanh khi gửi thành công và màu đỏ khi có lỗi.

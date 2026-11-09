@@ -26,7 +26,7 @@ var CONFIG_DEFAULTS = {
   "Hạn mức tối đa (Max Quota)": "100",
   "Hạn mức Google còn lại":  "100",
   "Đã gửi ngoài Sheet (Chênh lệch)": "0",
-  "Tình trạng hạn mức":      "🟢 An toàn",
+  "Tình trạng hạn mức":      "An toàn",
   "Email test":              "",
   "Quota đã dùng hôm nay":   "0",
   "Ngày quota":              "",
@@ -171,13 +171,13 @@ function refreshAndGetQuotaDetails() {
   var maxQuota = isPersonal ? 100 : 1500;
   var accountType = isPersonal ? "Gmail cá nhân (@gmail.com)" : "Google Workspace doanh nghiệp";
   
-  var remainingQuota = maxQuota;
+  var googleReportedRemaining = maxQuota;
   try {
     var live = MailApp.getRemainingDailyQuota();
     if (live !== null && live !== undefined) {
-      remainingQuota = live;
+      googleReportedRemaining = live;
       // Nếu số còn lại > 100 thì chắc chắn là tài khoản Workspace
-      if (remainingQuota > 100) {
+      if (googleReportedRemaining > 100) {
         maxQuota = 1500;
         accountType = "Google Workspace doanh nghiệp";
       } else {
@@ -191,17 +191,21 @@ function refreshAndGetQuotaDetails() {
     logError("Không thể đo MailApp.getRemainingDailyQuota: " + e.message);
   }
   
-  // Tính toán lượng tiêu thụ và chênh lệch ngoài Sheet
-  var totalUsedGoogle = Math.max(0, maxQuota - remainingQuota);
-  var usedOutside = Math.max(0, totalUsedGoogle - sentViaSheet);
+  // Google API có độ trễ cập nhật (cache) khi vừa gửi email.
+  // Đồng bộ số còn lại thực tế: Không bao giờ được vượt quá (maxQuota - sentViaSheet).
+  var remainingQuota = Math.max(0, Math.min(googleReportedRemaining, maxQuota - sentViaSheet));
   
-  var statusText = "🟢 An toàn (Còn " + remainingQuota + " lượt)";
+  // Tổng số thư đã tiêu hao hôm nay từ cả trong và ngoài Sheet
+  var totalUsedReal = Math.max(sentViaSheet, maxQuota - googleReportedRemaining);
+  var usedOutside = Math.max(0, totalUsedReal - sentViaSheet);
+  
+  var statusText = "An toàn (Còn " + remainingQuota + " lượt)";
   var isSafe = true;
   if (remainingQuota <= 1) {
-    statusText = "🔴 Đã cạn hạn mức (Dừng gửi an toàn)";
+    statusText = "Đã hết hạn mức (Dừng gửi an toàn)";
     isSafe = false;
   } else if (remainingQuota <= 20) {
-    statusText = "🟡 Cảnh báo: Sắp hết (Còn " + remainingQuota + " lượt)";
+    statusText = "Cảnh báo: Sắp hết (Còn " + remainingQuota + " lượt)";
   }
   
   // Lưu vào sheet Cấu hình
@@ -322,7 +326,7 @@ function syncConfigSheet() {
     "Hạn mức tối đa (Max Quota)": "Hạn mức tối đa do Google cấp (100 mail/ngày cho Gmail thường, 1500 cho Workspace)",
     "Hạn mức Google còn lại":  "Số lượt gửi máy chủ Google còn cấp cho tài khoản này hôm nay (Hệ thống đo sống trực tiếp)",
     "Đã gửi ngoài Sheet (Chênh lệch)": "Số email đã bị trừ ở ngoài Sheet hôm nay (do gửi bằng web Gmail, điện thoại hoặc script khác)",
-    "Tình trạng hạn mức":      "Đánh giá an toàn tự động: 🟢 An toàn / 🟡 Cảnh báo / 🔴 Đã cạn",
+    "Tình trạng hạn mức":      "Đánh giá an toàn tự động: An toàn / Cảnh báo / Đã hết",
     "Email test":              "Địa chỉ email nhận thư kiểm tra trước khi gửi hàng loạt",
     "Quota đã dùng hôm nay":   "Số email đã gửi qua Google Sheet này hôm nay (Hệ thống tự cập nhật)",
     "Ngày quota":              "Hệ thống tự động cập nhật, không sửa thủ công",

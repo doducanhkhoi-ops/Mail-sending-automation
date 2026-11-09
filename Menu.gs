@@ -14,7 +14,7 @@ function onOpen() {
       .addSeparator()
       .addItem("Bắt đầu gửi email", "menuStartSending")
       .addItem("Gửi thư thử nghiệm (Test)", "menuSendTest")
-      .addItem("📊 Kiểm tra Hạn mức Quota & Chênh lệch", "menuCheckQuota")
+      .addItem("Kiểm tra Hạn mức Quota & Chênh lệch", "menuCheckQuota")
       .addSeparator()
       .addItem("Tạm dừng", "menuPause")
       .addItem("Tiếp tục gửi", "menuResume")
@@ -103,16 +103,16 @@ function menuCheckQuota() {
   var details = refreshAndGetQuotaDetails();
   updateDashboard();
   
-  var msg = "👤 TÀI KHOẢN ĐANG GỬI:\n" +
+  var msg = "TÀI KHOẢN ĐANG GỬI:\n" +
             "   " + details.userEmail + "\n" +
             "   (" + details.accountType + ")\n\n" +
-            "📈 SỐ LIỆU TIÊU THỤ HÔM NAY:\n" +
-            "• Hạn mức tối đa Google cấp: " + details.maxQuota + " thư / ngày\n" +
-            "• Hạn mức thực tế còn lại: " + details.remainingQuota + " thư\n" +
-            "• Đã gửi thành công qua Sheet: " + details.sentViaSheet + " thư\n" +
-            "• Chênh lệch đã gửi ngoài Sheet: " + details.usedOutside + " thư\n" +
+            "SỐ LIỆU TIÊU THỤ HÔM NAY:\n" +
+            "- Hạn mức tối đa Google cấp: " + details.maxQuota + " thư / ngày\n" +
+            "- Hạn mức thực tế còn lại: " + details.remainingQuota + " thư\n" +
+            "- Đã gửi thành công qua Sheet: " + details.sentViaSheet + " thư\n" +
+            "- Chênh lệch đã gửi ngoài Sheet: " + details.usedOutside + " thư\n" +
             "  (Gửi từ Gmail web, điện thoại hoặc công cụ khác)\n\n" +
-            "🛡️ TÌNH TRẠNG HỆ THỐNG:\n" +
+            "TÌNH TRẠNG HỆ THỐNG:\n" +
             "   " + details.statusText + "\n\n" +
             "(Đã tự động cập nhật số liệu lên Dashboard và Cấu hình)";
             
