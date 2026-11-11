@@ -108,3 +108,10 @@ function onScheduledStartTrigger() { EmailSystem.onScheduledStartTrigger(); }
 * **Danh sách:** Dữ liệu người nhận. Cột đầu tiên là `Email`, có một cột tiêu đề là `Trạng thái`. Các cột còn lại (ví dụ: `Tên`, `Công ty`...) được dùng làm biến trộn dữ liệu `{{...}}`. Cột Trạng thái tự động đổi màu xanh khi gửi thành công và màu đỏ khi có lỗi.
 * **Dashboard:** Bảng điều khiển tiến trình gồm 5 thẻ chỉ số KPI (Tổng liên hệ, Đã gửi, Chờ gửi, Lỗi, Hạn mức ngày), thanh tiến độ trực quan Sparkline và bảng thông số vận hành.
 * **Lịch sử:** Nhật ký chi tiết của từng lượt gửi gồm 7 cột chuẩn: `Thời gian` (A), `Tài khoản gửi` (B), `Email người nhận` (C), `Tiêu đề` (D), `Trạng thái` (E), `Chi tiết lỗi` (F) và `Đợt #` (G). Hệ thống tự động nhận diện tài khoản gửi thực tế của từng email và tự động tô màu trực quan.
+
+---
+
+## 5. Giấy phép (License)
+
+Dự án được phân phối dưới giấy phép **[Apache License 2.0](LICENSE)**. Xem chi tiết quyền hạn và miễn trừ trách nhiệm tại file `LICENSE`.
+
